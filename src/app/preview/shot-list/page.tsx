@@ -27,6 +27,7 @@ export default function PreviewShotList() {
       </div>
       <ShotListWizard
         clientId="preview"
+        slug="preview"
         partner1="Paige"
         partner2="Jake"
         initialItems={MOCK_ITEMS}
