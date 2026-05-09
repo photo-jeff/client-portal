@@ -1,7 +1,6 @@
 'use client'
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 
@@ -37,25 +36,13 @@ export function NewClientForm() {
     e.preventDefault()
     setSaving(true)
     setError('')
-    const supabase = createClient()
     const slug = slugify(form.partner1_name, form.partner2_name)
 
-    const { error: insertError } = await supabase.from('clients').insert({
-      ...form,
-      portal_slug: slug,
-    })
-
-    if (insertError) {
-      setError(insertError.message)
-      setSaving(false)
-      return
-    }
-
-    // Send magic link invite
+    // Send everything to the server-side API route (uses admin client, bypasses RLS)
     const res = await fetch('/api/admin/invite', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email: form.email, slug }),
+      body: JSON.stringify({ ...form, slug }),
     })
 
     setSaving(false)
