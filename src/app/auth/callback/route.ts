@@ -12,6 +12,10 @@ export async function GET(request: NextRequest) {
       // Find the client's portal slug and redirect there
       const { data: { user } } = await supabase.auth.getUser()
       if (user) {
+        // Admin shortcut
+        if (user.email === 'mrjeffoliver@gmail.com') {
+          return NextResponse.redirect(`${origin}/admin`)
+        }
         const { data: client } = await supabase
           .from('clients')
           .select('portal_slug')
@@ -21,7 +25,7 @@ export async function GET(request: NextRequest) {
           return NextResponse.redirect(`${origin}/portal/${client.portal_slug}`)
         }
       }
-      return NextResponse.redirect(`${origin}/portal`)
+      return NextResponse.redirect(`${origin}/login?error=auth`)
     }
   }
   return NextResponse.redirect(`${origin}/login?error=auth`)
