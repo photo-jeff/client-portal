@@ -1,7 +1,7 @@
-import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { SectionCard } from '@/components/portal/SectionCard'
 import { Divider } from '@/components/ui/Divider'
-import { redirect } from 'next/navigation'
+import { notFound } from 'next/navigation'
 
 export default async function PortalDashboard({
   params,
@@ -9,23 +9,23 @@ export default async function PortalDashboard({
   params: Promise<{ slug: string }>
 }) {
   const { slug } = await params
-  const supabase = await createClient()
+  const admin = createAdminClient()
 
-  const { data: client } = await supabase
+  const { data: client } = await admin
     .from('clients')
     .select('*')
     .eq('portal_slug', slug)
     .single()
 
-  if (!client) redirect('/login')
+  if (!client) notFound()
 
-  const { data: questionnaire } = await supabase
+  const { data: questionnaire } = await admin
     .from('questionnaire_responses')
     .select('completed_at')
     .eq('client_id', client.id)
     .single()
 
-  const { data: shotListItems } = await supabase
+  const { data: shotListItems } = await admin
     .from('shot_list_items')
     .select('id')
     .eq('client_id', client.id)

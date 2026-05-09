@@ -1,6 +1,6 @@
-import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { Divider } from '@/components/ui/Divider'
-import { redirect } from 'next/navigation'
+import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { ChevronLeft } from 'lucide-react'
 import { ShotListWizard } from './ShotListWizard'
@@ -11,17 +11,17 @@ export default async function ShotListPage({
   params: Promise<{ slug: string }>
 }) {
   const { slug } = await params
-  const supabase = await createClient()
+  const admin = createAdminClient()
 
-  const { data: client } = await supabase
+  const { data: client } = await admin
     .from('clients')
     .select('*')
     .eq('portal_slug', slug)
     .single()
 
-  if (!client) redirect('/login')
+  if (!client) notFound()
 
-  const { data: existingItems } = await supabase
+  const { data: existingItems } = await admin
     .from('shot_list_items')
     .select('*')
     .eq('client_id', client.id)
@@ -41,6 +41,7 @@ export default async function ShotListPage({
       </div>
       <ShotListWizard
         clientId={client.id}
+        slug={slug}
         partner1={client.partner1_name}
         partner2={client.partner2_name}
         initialItems={existingItems ?? []}

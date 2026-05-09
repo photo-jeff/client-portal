@@ -1,6 +1,6 @@
-import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { Divider } from '@/components/ui/Divider'
-import { redirect } from 'next/navigation'
+import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { ChevronLeft, ExternalLink } from 'lucide-react'
 import { InvoiceList } from './InvoiceList'
@@ -11,15 +11,15 @@ export default async function InvoicesPage({
   params: Promise<{ slug: string }>
 }) {
   const { slug } = await params
-  const supabase = await createClient()
+  const admin = createAdminClient()
 
-  const { data: client } = await supabase
+  const { data: client } = await admin
     .from('clients')
-    .select('*')
+    .select('id, zoho_contact_id')
     .eq('portal_slug', slug)
     .single()
 
-  if (!client) redirect('/login')
+  if (!client) notFound()
 
   // Fetch invoices from Zoho via our API route
   // We pass the zoho_contact_id stored on the client record

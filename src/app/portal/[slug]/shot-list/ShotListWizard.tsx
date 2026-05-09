@@ -1,6 +1,5 @@
 'use client'
 import { useState } from 'react'
-import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 import { Plus, Trash2, GripVertical, CheckCircle } from 'lucide-react'
@@ -8,6 +7,7 @@ import type { ShotListItem } from '@/lib/types'
 
 interface Props {
   clientId: string
+  slug: string
   partner1: string
   partner2: string
   initialItems: ShotListItem[]
@@ -33,7 +33,7 @@ const QUICK_SUGGESTIONS = (p1: string, p2: string) => [
   { description: `${p2} with groomsmen`, category: 'Groom with groomsmen', people: 'Groomsmen' },
 ]
 
-export function ShotListWizard({ clientId, partner1, partner2, initialItems }: Props) {
+export function ShotListWizard({ clientId, slug, partner1, partner2, initialItems }: Props) {
   const [items, setItems] = useState<Omit<ShotListItem, 'id' | 'client_id' | 'sort_order'>[]>(
     initialItems.map(i => ({ description: i.description, category: i.category, people: i.people }))
   )
@@ -58,19 +58,11 @@ export function ShotListWizard({ clientId, partner1, partner2, initialItems }: P
 
   async function saveList() {
     setSaving(true)
-    const supabase = createClient()
-    await supabase.from('shot_list_items').delete().eq('client_id', clientId)
-    if (items.length > 0) {
-      await supabase.from('shot_list_items').insert(
-        items.map((item, i) => ({
-          client_id: clientId,
-          description: item.description,
-          category: item.category,
-          people: item.people,
-          sort_order: i,
-        }))
-      )
-    }
+    await fetch('/api/portal/shot-list', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ slug, items }),
+    })
     setSaving(false)
     setSaved(true)
     setTimeout(() => setSaved(false), 2000)

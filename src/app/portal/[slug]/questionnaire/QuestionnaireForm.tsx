@@ -1,6 +1,5 @@
 'use client'
 import { useState } from 'react'
-import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/Button'
 import { Input, Textarea } from '@/components/ui/Input'
 import { calculatePhotographerTimings, formatDisplayTime } from '@/lib/time-utils'
@@ -72,12 +71,11 @@ export function QuestionnaireForm({ clientId, slug, partner1, partner2, initialD
 
   async function saveDraft() {
     setSaving(true)
-    const supabase = createClient()
-    await supabase.from('questionnaire_responses').upsert({
-      client_id: clientId,
-      data,
-      completed_at: null,
-    }, { onConflict: 'client_id' })
+    await fetch('/api/portal/questionnaire', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ slug, data, completed_at: null }),
+    })
     setSaving(false)
     setSaved(true)
     setTimeout(() => setSaved(false), 2000)
@@ -85,12 +83,11 @@ export function QuestionnaireForm({ clientId, slug, partner1, partner2, initialD
 
   async function handleSubmit() {
     setSaving(true)
-    const supabase = createClient()
-    await supabase.from('questionnaire_responses').upsert({
-      client_id: clientId,
-      data,
-      completed_at: new Date().toISOString(),
-    }, { onConflict: 'client_id' })
+    await fetch('/api/portal/questionnaire', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ slug, data, completed_at: new Date().toISOString() }),
+    })
     setSaving(false)
     setSubmitted(true)
   }

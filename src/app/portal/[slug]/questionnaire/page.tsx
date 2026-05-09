@@ -1,6 +1,6 @@
-import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { Divider } from '@/components/ui/Divider'
-import { redirect } from 'next/navigation'
+import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { ChevronLeft } from 'lucide-react'
 import { QuestionnaireForm } from './QuestionnaireForm'
@@ -11,17 +11,17 @@ export default async function QuestionnairePage({
   params: Promise<{ slug: string }>
 }) {
   const { slug } = await params
-  const supabase = await createClient()
+  const admin = createAdminClient()
 
-  const { data: client } = await supabase
+  const { data: client } = await admin
     .from('clients')
     .select('*')
     .eq('portal_slug', slug)
     .single()
 
-  if (!client) redirect('/login')
+  if (!client) notFound()
 
-  const { data: existing } = await supabase
+  const { data: existing } = await admin
     .from('questionnaire_responses')
     .select('*')
     .eq('client_id', client.id)

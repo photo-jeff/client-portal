@@ -15,7 +15,6 @@ export async function POST(request: NextRequest) {
           package_name, vsco_job_id, zoho_contact_id } = body
   const admin = createAdminClient()
 
-  // Insert client record via SECURITY DEFINER function (bypasses RLS)
   const { error: insertError } = await admin.rpc('insert_client', {
     p_email: email,
     p_partner1_name: partner1_name,
@@ -32,18 +31,6 @@ export async function POST(request: NextRequest) {
 
   if (insertError) return NextResponse.json({ error: insertError.message }, { status: 500 })
 
-  // If auth user already exists (e.g. from a previous failed invite), delete them first
-  // Uses a SECURITY DEFINER SQL function — avoids listUsers() which is unreliable with sb_secret_* keys
-  await admin.rpc('delete_auth_user_by_email', { p_email: email })
-
-  // Send invite email — creates auth user and emails them their sign-in link
-  const { error: linkError } = await admin.auth.admin.inviteUserByEmail(email, {
-    redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL}/auth/callback`,
-  })
-
-  if (linkError) return NextResponse.json({ error: linkError.message }, { status: 500 })
-
-  await admin.from('clients').update({ invite_sent_at: new Date().toISOString() }).eq('email', email)
-
-  return NextResponse.json({ ok: true })
+  const portalUrl = `${process.env.NEXT_PUBLIC_SITE_URL}/portal/${slug}`
+  return NextResponse.json({ ok: true, portalUrl })
 }

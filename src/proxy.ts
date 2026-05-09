@@ -33,8 +33,8 @@ export async function proxy(request: NextRequest) {
 
   const { data: { user } } = await supabase.auth.getUser()
 
-  // Protect portal and admin routes
-  if ((pathname.startsWith('/portal') || pathname.startsWith('/admin')) && !user) {
+  // Only admin routes need auth — portal is slug-based (no login required)
+  if (pathname.startsWith('/admin') && !user) {
     return NextResponse.redirect(new URL('/login', request.url))
   }
 

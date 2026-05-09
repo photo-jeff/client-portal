@@ -1,5 +1,5 @@
-import { redirect } from 'next/navigation'
-import { createClient } from '@/lib/supabase/server'
+import { notFound } from 'next/navigation'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { PortalNav } from '@/components/portal/PortalNav'
 
 export default async function PortalLayout({
@@ -10,21 +10,15 @@ export default async function PortalLayout({
   params: Promise<{ slug: string }>
 }) {
   const { slug } = await params
-  const supabase = await createClient()
+  const admin = createAdminClient()
 
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) redirect('/login')
-
-  const { data: client } = await supabase
+  const { data: client } = await admin
     .from('clients')
-    .select('*')
+    .select('partner1_name, partner2_name')
     .eq('portal_slug', slug)
     .single()
 
-  if (!client) redirect('/login')
-
-  // Verify the logged-in user owns this portal
-  if (client.email !== user.email) redirect('/login')
+  if (!client) notFound()
 
   const partnerNames = `${client.partner1_name} & ${client.partner2_name}`
 

@@ -1,8 +1,8 @@
 import { Divider } from '@/components/ui/Divider'
 import Link from 'next/link'
 import { ChevronLeft, Download } from 'lucide-react'
-import { createClient } from '@/lib/supabase/server'
-import { redirect } from 'next/navigation'
+import { createAdminClient } from '@/lib/supabase/admin'
+import { notFound } from 'next/navigation'
 import { Button } from '@/components/ui/Button'
 
 export default async function ImportantInfoPage({
@@ -11,13 +11,13 @@ export default async function ImportantInfoPage({
   params: Promise<{ slug: string }>
 }) {
   const { slug } = await params
-  const supabase = await createClient()
-  const { data: client } = await supabase
+  const admin = createAdminClient()
+  const { data: client } = await admin
     .from('clients')
-    .select('*')
+    .select('id')
     .eq('portal_slug', slug)
     .single()
-  if (!client) redirect('/login')
+  if (!client) notFound()
 
   return (
     <div className="max-w-2xl mx-auto">

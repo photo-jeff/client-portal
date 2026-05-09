@@ -1,6 +1,5 @@
 'use client'
 import { useState } from 'react'
-import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/Button'
 import { Input } from '@/components/ui/Input'
 
@@ -11,9 +10,9 @@ function slugify(p1: string, p2: string) {
 }
 
 export function NewClientForm() {
-  const router = useRouter()
   const [saving, setSaving] = useState(false)
-  const [inviteSent, setInviteSent] = useState(false)
+  const [portalUrl, setPortalUrl] = useState('')
+  const [copied, setCopied] = useState(false)
   const [error, setError] = useState('')
   const [form, setForm] = useState({
     partner1_name: '',
@@ -38,7 +37,6 @@ export function NewClientForm() {
     setError('')
     const slug = slugify(form.partner1_name, form.partner2_name)
 
-    // Send everything to the server-side API route (uses admin client, bypasses RLS)
     const res = await fetch('/api/admin/invite', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -47,18 +45,47 @@ export function NewClientForm() {
 
     setSaving(false)
     if (res.ok) {
-      setInviteSent(true)
-      setTimeout(() => router.push('/admin'), 2000)
+      const { portalUrl } = await res.json()
+      setPortalUrl(portalUrl)
     } else {
-      router.push('/admin')
+      const { error: msg } = await res.json().catch(() => ({ error: 'Something went wrong' }))
+      setError(msg || 'Something went wrong')
     }
   }
 
-  if (inviteSent) {
+  async function copyUrl() {
+    await navigator.clipboard.writeText(portalUrl)
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
+  }
+
+  if (portalUrl) {
     return (
-      <div className="bg-white border border-[#e0ddd8] p-10 text-center space-y-3">
-        <p className="font-serif text-2xl">Portal created</p>
-        <p className="text-sm text-[#888]">Invite sent to {form.email}</p>
+      <div className="bg-white border border-[#e0ddd8] p-10 space-y-6">
+        <div className="text-center space-y-2">
+          <p className="font-serif text-2xl">Portal created</p>
+          <p className="text-sm text-[#888]">
+            {form.partner1_name} & {form.partner2_name} — send them this link:
+          </p>
+        </div>
+        <div className="flex items-center gap-3">
+          <input
+            readOnly
+            value={portalUrl}
+            className="flex-1 border border-[#e0ddd8] px-4 py-3 text-sm bg-[#faf9f7] text-[#1a1a1a] font-mono"
+          />
+          <Button variant="outline" onClick={copyUrl}>
+            {copied ? 'Copied ✓' : 'Copy'}
+          </Button>
+        </div>
+        <p className="text-xs text-center text-[#aaa]">
+          This is their permanent portal link — no login required.
+        </p>
+        <div className="text-center">
+          <a href="/admin" className="text-xs tracking-[0.1em] uppercase underline hover:no-underline">
+            Back to admin
+          </a>
+        </div>
       </div>
     )
   }
@@ -83,7 +110,7 @@ export function NewClientForm() {
       </div>
       {error && <p className="text-sm text-red-500">{error}</p>}
       <Button variant="filled" className="w-full" type="submit" disabled={saving}>
-        {saving ? 'Creating…' : 'Create portal & send invite'}
+        {saving ? 'Creating…' : 'Create portal'}
       </Button>
     </form>
   )

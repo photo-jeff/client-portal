@@ -1,7 +1,7 @@
-import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { Card } from '@/components/ui/Card'
 import { Divider } from '@/components/ui/Divider'
-import { redirect } from 'next/navigation'
+import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { ChevronLeft } from 'lucide-react'
 
@@ -21,15 +21,15 @@ export default async function WeddingDetailsPage({
   params: Promise<{ slug: string }>
 }) {
   const { slug } = await params
-  const supabase = await createClient()
+  const admin = createAdminClient()
 
-  const { data: client } = await supabase
+  const { data: client } = await admin
     .from('clients')
     .select('*')
     .eq('portal_slug', slug)
     .single()
 
-  if (!client) redirect('/login')
+  if (!client) notFound()
 
   const weddingDate = client.wedding_date
     ? new Date(client.wedding_date).toLocaleDateString('en-GB', {
