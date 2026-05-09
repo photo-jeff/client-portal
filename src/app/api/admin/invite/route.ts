@@ -32,7 +32,14 @@ export async function POST(request: NextRequest) {
 
   if (insertError) return NextResponse.json({ error: insertError.message }, { status: 500 })
 
-  // Send invite email (creates auth user + emails them their sign-in link)
+  // If auth user already exists (e.g. from a previous failed invite), delete them first
+  const { data: { users } } = await admin.auth.admin.listUsers()
+  const existing = users.find(u => u.email === email)
+  if (existing) {
+    await admin.auth.admin.deleteUser(existing.id)
+  }
+
+  // Send invite email — creates auth user and emails them their sign-in link
   const { error: linkError } = await admin.auth.admin.inviteUserByEmail(email, {
     redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL}/auth/callback`,
   })
