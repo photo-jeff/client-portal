@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { createAdminClient } from '@/lib/supabase/admin'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { Divider } from '@/components/ui/Divider'
@@ -9,7 +10,8 @@ export default async function AdminPage() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user || user.email !== 'mrjeffoliver@gmail.com') redirect('/login')
 
-  const { data: clients } = await supabase
+  const admin = createAdminClient()
+  const { data: clients } = await admin
     .from('clients')
     .select('*')
     .order('wedding_date', { ascending: true })

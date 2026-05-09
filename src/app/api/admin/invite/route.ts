@@ -32,13 +32,9 @@ export async function POST(request: NextRequest) {
 
   if (insertError) return NextResponse.json({ error: insertError.message }, { status: 500 })
 
-  // Send magic link invite
-  const { error: linkError } = await admin.auth.admin.generateLink({
-    type: 'magiclink',
-    email,
-    options: {
-      redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL}/auth/callback`,
-    },
+  // Send invite email (creates auth user + emails them their sign-in link)
+  const { error: linkError } = await admin.auth.admin.inviteUserByEmail(email, {
+    redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL}/auth/callback`,
   })
 
   if (linkError) return NextResponse.json({ error: linkError.message }, { status: 500 })
