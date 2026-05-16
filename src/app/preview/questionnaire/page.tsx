@@ -51,6 +51,10 @@ export default function PreviewQuestionnaire() {
         slug="preview"
         partner1="Paige"
         partner2="Jake"
+        ceremonyVenue="The Orangery, Maidstone"
+        ceremonyTime="13:30"
+        receptionVenue={null}
+        daysUntil={180}
         initialData={MOCK_DATA}
         isCompleted={false}
       />
