@@ -2,7 +2,7 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { Divider } from '@/components/ui/Divider'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
-import { ChevronLeft, ExternalLink } from 'lucide-react'
+import { ChevronLeft } from 'lucide-react'
 import { InvoiceList } from './InvoiceList'
 
 export default async function InvoicesPage({
@@ -15,14 +15,12 @@ export default async function InvoicesPage({
 
   const { data: client } = await admin
     .from('clients')
-    .select('id, zoho_contact_id')
+    .select('id')
     .eq('portal_slug', slug)
     .single()
 
   if (!client) notFound()
 
-  // Fetch invoices from Zoho via our API route
-  // We pass the zoho_contact_id stored on the client record
   return (
     <div className="max-w-2xl mx-auto">
       <Link href={`/portal/${slug}`} className="inline-flex items-center gap-2 text-xs tracking-[0.1em] uppercase text-[#888] hover:text-[#1a1a1a] mb-8 transition-colors">
@@ -32,14 +30,7 @@ export default async function InvoicesPage({
         <h1 className="font-serif text-4xl mb-2">Invoices</h1>
         <Divider />
       </div>
-      <InvoiceList clientId={client.id} zohoContactId={client.zoho_contact_id} />
-
-      <div className="mt-8 bg-[#faf9f7] border border-[#e0ddd8] p-6">
-        <p className="text-xs tracking-[0.1em] uppercase text-[#888] mb-2">Bank transfer</p>
-        <p className="text-sm text-[#888]">
-          You can also pay by bank transfer. Please use your invoice number as the reference and email us once sent.
-        </p>
-      </div>
+      <InvoiceList slug={slug} />
     </div>
   )
 }

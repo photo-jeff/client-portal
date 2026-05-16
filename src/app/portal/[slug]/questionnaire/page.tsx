@@ -27,6 +27,10 @@ export default async function QuestionnairePage({
     .eq('client_id', client.id)
     .single()
 
+  const daysUntil = client.wedding_date
+    ? Math.ceil((new Date(client.wedding_date).getTime() - Date.now()) / 86400000)
+    : null
+
   return (
     <div className="max-w-2xl mx-auto">
       <Link href={`/portal/${slug}`} className="inline-flex items-center gap-2 text-xs tracking-[0.1em] uppercase text-[#888] hover:text-[#1a1a1a] mb-8 transition-colors">
@@ -36,7 +40,7 @@ export default async function QuestionnairePage({
         <h1 className="font-serif text-4xl mb-2">Questionnaire</h1>
         <Divider />
         <p className="text-sm text-[#888] mt-4 max-w-md mx-auto">
-          Your answers help us plan the perfect coverage for your wedding day. Please complete this at least 4 weeks before your wedding.
+          Your answers help us plan the perfect coverage. The more we know, the better prepared we are for your day.
         </p>
       </div>
       <QuestionnaireForm
@@ -44,6 +48,10 @@ export default async function QuestionnairePage({
         slug={slug}
         partner1={client.partner1_name}
         partner2={client.partner2_name}
+        ceremonyVenue={client.ceremony_venue ?? null}
+        ceremonyTime={client.ceremony_time ?? null}
+        receptionVenue={client.reception_venue ?? null}
+        daysUntil={daysUntil}
         initialData={existing?.data ?? null}
         isCompleted={!!existing?.completed_at}
       />

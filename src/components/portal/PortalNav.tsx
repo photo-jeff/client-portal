@@ -14,7 +14,7 @@ const navItems = [
   { label: 'Questionnaire', href: '/questionnaire' },
   { label: 'Shot List', href: '/shot-list' },
   { label: 'Invoices', href: '/invoices' },
-  { label: 'Important Info', href: '/important-info' },
+  { label: 'For Your Venue', href: '/venue-info' },
 ]
 
 export function PortalNav({ slug, partnerNames }: NavProps) {

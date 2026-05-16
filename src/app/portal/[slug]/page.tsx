@@ -2,6 +2,8 @@ import { createAdminClient } from '@/lib/supabase/admin'
 import { SectionCard } from '@/components/portal/SectionCard'
 import { Divider } from '@/components/ui/Divider'
 import { notFound } from 'next/navigation'
+import Link from 'next/link'
+import { CalendarHeart } from 'lucide-react'
 
 export default async function PortalDashboard({
   params,
@@ -43,6 +45,15 @@ export default async function PortalDashboard({
     ? Math.ceil((new Date(client.wedding_date).getTime() - Date.now()) / 86400000)
     : null
 
+  // Is this an album package? If so, show pre-wed shoot card
+  const isAlbumPackage = client.package_name &&
+    (client.package_name.toLowerCase().includes('album') ||
+     client.package_name.toLowerCase().includes('frame'))
+
+  // Timeline phase
+  const isClose = daysUntil !== null && daysUntil <= 60
+  const isApproaching = daysUntil !== null && daysUntil <= 180
+
   return (
     <div className="max-w-2xl mx-auto">
       {/* Welcome header */}
@@ -60,7 +71,34 @@ export default async function PortalDashboard({
             {daysUntil} days to go
           </p>
         )}
+        {daysUntil !== null && daysUntil <= 0 && (
+          <p className="text-xs tracking-[0.1em] uppercase text-[#aaa] mt-1">
+            What a day — thank you for having us
+          </p>
+        )}
       </div>
+
+      {/* Pre-wedding shoot banner */}
+      {isAlbumPackage && daysUntil !== null && daysUntil > 0 && (
+        <div className="mb-6 bg-[#1a1a1a] text-white p-6 flex items-start gap-4">
+          <CalendarHeart size={20} className="shrink-0 mt-0.5 text-[#aaa]" />
+          <div>
+            <p className="text-xs tracking-[0.12em] uppercase text-[#aaa] mb-1">Your {client.package_name} includes</p>
+            <p className="font-serif text-lg mb-2">Pre-Wedding Shoot</p>
+            <p className="text-sm text-[#aaa] mb-4">
+              A relaxed shoot in the months before your wedding — a chance to get comfortable in front of the camera before the big day.
+            </p>
+            <a
+              href="https://calendly.com/jeffoliverphotography/pre-wedding-shoot"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-block text-xs tracking-[0.1em] uppercase border border-white/40 px-4 py-2 hover:bg-white hover:text-[#1a1a1a] transition-colors"
+            >
+              Book your shoot →
+            </a>
+          </div>
+        </div>
+      )}
 
       {/* Sections */}
       <div className="bg-white border border-[#e0ddd8] px-8">
@@ -71,27 +109,35 @@ export default async function PortalDashboard({
         />
         <SectionCard
           title="Questionnaire"
-          description="Help us understand your day so we can plan the perfect coverage."
+          description={
+            isClose
+              ? "Please complete this before your wedding day — we need your answers to plan everything."
+              : "Help us understand your day. No rush — come back a few months before the wedding."
+          }
           href={`/portal/${slug}/questionnaire`}
           completed={questionnaireComplete}
-          required={!questionnaireComplete}
+          required={isClose && !questionnaireComplete}
         />
         <SectionCard
           title="Shot List"
-          description="Build your list of must-have group photos and special moments."
+          description={
+            isClose
+              ? "Please submit your group shot requests — we need these at least 2 weeks before."
+              : "Build your list of must-have group photos. Worth thinking about as you get closer."
+          }
           href={`/portal/${slug}/shot-list`}
           completed={shotListComplete}
-          required={!shotListComplete}
+          required={isClose && !shotListComplete}
         />
         <SectionCard
           title="Invoices"
-          description="View your invoices and make secure payments."
+          description="Your deposit and balance information."
           href={`/portal/${slug}/invoices`}
         />
         <SectionCard
-          title="Important Information"
-          description="Preparation tips, timings, and documents for your venue."
-          href={`/portal/${slug}/important-info`}
+          title="For Your Venue"
+          description="Photographer details, insurance documents, and what to expect on the day."
+          href={`/portal/${slug}/venue-info`}
         />
       </div>
 
