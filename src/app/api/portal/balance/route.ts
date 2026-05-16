@@ -13,7 +13,7 @@ export async function GET(request: NextRequest) {
     .single()
 
   if (!client?.vsco_job_id) {
-    return NextResponse.json({ outstanding: null })
+    return NextResponse.json({ total: null, outstanding: null })
   }
 
   try {
@@ -22,18 +22,23 @@ export async function GET(request: NextRequest) {
         'X-API-KEY': process.env.VSCO_API_KEY!,
         'Content-Type': 'application/json',
       },
-      next: { revalidate: 3600 }, // cache for 1 hour
+      next: { revalidate: 3600 },
     })
 
-    if (!res.ok) return NextResponse.json({ outstanding: null })
+    if (!res.ok) return NextResponse.json({ total: null, outstanding: null })
 
     const data = await res.json()
+
+    const total = typeof data.totalRevenue === 'number'
+      ? parseFloat((data.totalRevenue / 100).toFixed(2))
+      : null
+
     const outstanding = typeof data.accountBalance === 'number'
       ? parseFloat((data.accountBalance / 100).toFixed(2))
       : null
 
-    return NextResponse.json({ outstanding })
+    return NextResponse.json({ total, outstanding })
   } catch {
-    return NextResponse.json({ outstanding: null })
+    return NextResponse.json({ total: null, outstanding: null })
   }
 }

@@ -21,11 +21,7 @@ export default async function ShotListPage({
 
   if (!client) notFound()
 
-  const { data: existingItems } = await admin
-    .from('shot_list_items')
-    .select('*')
-    .eq('client_id', client.id)
-    .order('sort_order')
+  const existingList = (client as Record<string, unknown>).shot_list_text as string | null
 
   return (
     <div className="max-w-2xl mx-auto">
@@ -36,15 +32,14 @@ export default async function ShotListPage({
         <h1 className="font-serif text-4xl mb-2">Shot List</h1>
         <Divider />
         <p className="text-sm text-[#888] mt-4 max-w-md mx-auto">
-          Build your list of must-have group photos. We recommend no more than 15 combinations — please submit at least 2–3 weeks before your wedding.
+          We&apos;ll have a quick chat to build your personalised group shot list together — usually takes about 10 minutes.
         </p>
       </div>
       <ShotListWizard
-        clientId={client.id}
         slug={slug}
         partner1={client.partner1_name}
         partner2={client.partner2_name}
-        initialItems={existingItems ?? []}
+        existingList={existingList}
       />
     </div>
   )

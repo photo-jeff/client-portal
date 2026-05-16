@@ -89,7 +89,7 @@ export default async function PortalDashboard({
               A relaxed shoot in the months before your wedding — a chance to get comfortable in front of the camera before the big day.
             </p>
             <a
-              href="https://calendly.com/jeffoliverphotography/pre-wedding-shoot"
+              href="https://calendly.com/jeffoliverphoto/pre-wed-shoot"
               target="_blank"
               rel="noopener noreferrer"
               className="inline-block text-xs tracking-[0.1em] uppercase border border-white/40 px-4 py-2 hover:bg-white hover:text-[#1a1a1a] transition-colors"

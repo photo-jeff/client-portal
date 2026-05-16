@@ -1,6 +1,47 @@
 import { createAdminClient } from '@/lib/supabase/admin'
 import { NextRequest, NextResponse } from 'next/server'
 
+function formatField(key: string, value: unknown): string {
+  if (!value) return ''
+  const label = key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())
+  return `<tr><td style="padding:6px 12px 6px 0;color:#888;font-size:13px;white-space:nowrap;vertical-align:top">${label}</td><td style="padding:6px 0;font-size:13px">${String(value)}</td></tr>`
+}
+
+async function sendEmail(partnerNames: string, slug: string, data: Record<string, unknown>) {
+  if (!process.env.RESEND_API_KEY) return // silently skip if not configured
+
+  const rows = Object.entries(data)
+    .map(([k, v]) => formatField(k, v))
+    .filter(Boolean)
+    .join('')
+
+  const html = `
+    <div style="font-family:sans-serif;max-width:600px;margin:0 auto;color:#1a1a1a">
+      <h2 style="font-family:Georgia,serif;font-weight:400;margin:0 0 8px">
+        Questionnaire submitted
+      </h2>
+      <p style="color:#888;font-size:13px;margin:0 0 24px">
+        ${partnerNames} · <a href="${process.env.NEXT_PUBLIC_SITE_URL}/admin/clients" style="color:#888">View in admin</a>
+      </p>
+      <table style="width:100%;border-collapse:collapse">${rows}</table>
+    </div>
+  `
+
+  await fetch('https://api.resend.com/emails', {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${process.env.RESEND_API_KEY}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      from: 'portal@jeffoliverphotography.com',
+      to: 'mrjeffoliver@gmail.com',
+      subject: `Questionnaire submitted — ${partnerNames}`,
+      html,
+    }),
+  }).catch(err => console.error('Email send failed:', err))
+}
+
 export async function POST(request: NextRequest) {
   const { slug, data, completed_at } = await request.json()
   if (!slug) return NextResponse.json({ error: 'Missing slug' }, { status: 400 })
@@ -9,7 +50,7 @@ export async function POST(request: NextRequest) {
 
   const { data: client } = await admin
     .from('clients')
-    .select('id')
+    .select('id, partner1_name, partner2_name')
     .eq('portal_slug', slug)
     .single()
 
@@ -20,6 +61,12 @@ export async function POST(request: NextRequest) {
     .upsert({ client_id: client.id, data, completed_at: completed_at ?? null }, { onConflict: 'client_id' })
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+
+  // Send email to Jeff when questionnaire is fully submitted
+  if (completed_at) {
+    const partnerNames = `${client.partner1_name} & ${client.partner2_name}`
+    await sendEmail(partnerNames, slug, data as Record<string, unknown>)
+  }
 
   return NextResponse.json({ ok: true })
 }

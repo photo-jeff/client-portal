@@ -28,6 +28,8 @@ export default async function ClientDetailPage(props: { params: Promise<{ id: st
     .eq('client_id', id)
     .order('sort_order')
 
+  const shotListText = (client as Record<string, unknown>).shot_list_text as string | null
+
   return (
     <div className="min-h-screen" style={{ background: '#faf9f7' }}>
       <header className="bg-white border-b border-[#e0ddd8]">
@@ -130,22 +132,17 @@ export default async function ClientDetailPage(props: { params: Promise<{ id: st
         <section className="bg-white border border-[#e0ddd8] p-8">
           <div className="flex items-center justify-between mb-6">
             <h2 className="font-serif text-xl">Shot List</h2>
-            {shotList && shotList.length > 0 && (
-              <span className="text-xs tracking-[0.1em] uppercase text-[#888]">{shotList.length} shots</span>
+            {shotListText && (
+              <span className="text-xs tracking-[0.1em] uppercase text-green-600">Completed</span>
             )}
           </div>
           <Divider />
-          {shotList && shotList.length > 0 ? (
-            <ul className="mt-6 divide-y divide-[#f0ede8]">
-              {shotList.map((item) => (
-                <li key={item.id as string} className="py-3 flex items-start gap-3 text-sm">
-                  <span className="text-xs tracking-[0.08em] uppercase text-[#888] w-28 shrink-0 pt-0.5">{item.category as string}</span>
-                  <span>{item.description as string}{item.people ? ` — ${item.people}` : ''}</span>
-                </li>
-              ))}
-            </ul>
+          {shotListText ? (
+            <pre className="mt-6 text-sm text-[#1a1a1a] whitespace-pre-wrap leading-relaxed font-sans">
+              {shotListText}
+            </pre>
           ) : (
-            <p className="mt-6 text-sm text-[#888]">Client hasn&apos;t added shots yet.</p>
+            <p className="mt-6 text-sm text-[#888]">Client hasn&apos;t completed their shot list yet.</p>
           )}
         </section>
 
