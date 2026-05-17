@@ -11,6 +11,7 @@ interface BalanceData {
 
 interface ZohoData {
   url: string | null
+  status: 'outstanding' | 'none' | 'no-contact' | 'error'
 }
 
 function fmt(n: number) {
@@ -54,6 +55,8 @@ function Box({
 export function InvoiceList({ slug }: { slug: string }) {
   const [data, setData] = useState<BalanceData | undefined>(undefined)
   const [zoho, setZoho] = useState<ZohoData | undefined>(undefined)
+  const [creating, setCreating] = useState(false)
+  const [createError, setCreateError] = useState(false)
 
   useEffect(() => {
     fetch(`/api/portal/balance?slug=${slug}`)
@@ -64,15 +67,46 @@ export function InvoiceList({ slug }: { slug: string }) {
     fetch(`/api/portal/zoho-invoice?slug=${slug}`)
       .then(r => r.json())
       .then(d => setZoho(d))
-      .catch(() => setZoho({ url: null }))
+      .catch(() => setZoho({ url: null, status: 'error' }))
   }, [slug])
+
+  async function handlePay() {
+    if (!zoho) return
+
+    if (zoho.status === 'outstanding' && zoho.url) {
+      window.open(zoho.url, '_blank')
+      return
+    }
+
+    if (zoho.status === 'none') {
+      setCreating(true)
+      setCreateError(false)
+      try {
+        const res = await fetch(`/api/portal/zoho-invoice?slug=${slug}`, { method: 'POST' })
+        if (!res.ok) throw new Error('Failed to create invoice')
+        const { url } = await res.json()
+        if (url) {
+          // Update local state so a refresh shows the existing invoice
+          setZoho({ url, status: 'outstanding' })
+          window.open(url, '_blank')
+        } else {
+          setCreateError(true)
+        }
+      } catch {
+        setCreateError(true)
+      } finally {
+        setCreating(false)
+      }
+    }
+  }
 
   const loading = data === undefined
   const total = data?.total ?? null
   const outstanding = data?.outstanding ?? null
-
-  // remaining = total - deposit (the "balance" portion they agreed to pay)
   const remaining = total !== null ? Math.max(0, total - DEPOSIT) : null
+
+  const canPay = zoho?.status === 'outstanding' || zoho?.status === 'none'
+  const zohoLoading = zoho === undefined
 
   return (
     <div className="space-y-4">
@@ -95,7 +129,7 @@ export function InvoiceList({ slug }: { slug: string }) {
       <Box
         label="Remaining balance"
         value={loading ? <span className="text-[#ccc]">Loading…</span> : remaining !== null ? fmt(remaining) : <span className="text-[#ccc]">—</span>}
-        sub={remaining !== null ? `Total package cost minus your deposit` : undefined}
+        sub={remaining !== null ? 'Total package cost minus your deposit' : undefined}
       />
 
       {/* 4. Final balance outstanding */}
@@ -114,24 +148,33 @@ export function InvoiceList({ slug }: { slug: string }) {
 
       {outstanding !== null && outstanding > 0 && (
         <div className="bg-[#faf9f7] border border-[#e0ddd8] p-5 space-y-4">
-          {zoho?.url && (
-            <a
-              href={zoho.url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white text-xs tracking-[0.12em] uppercase font-medium px-6 py-3 transition-colors"
-            >
-              Pay Here →
-            </a>
+
+          {!zohoLoading && canPay && (
+            <div className="space-y-2">
+              <button
+                onClick={handlePay}
+                disabled={creating}
+                className="inline-flex items-center gap-2 bg-green-600 hover:bg-green-700 disabled:opacity-60 text-white text-xs tracking-[0.12em] uppercase font-medium px-6 py-3 transition-colors"
+              >
+                {creating ? 'Generating invoice…' : 'Pay Here →'}
+              </button>
+              {createError && (
+                <p className="text-xs text-red-500">
+                  Something went wrong generating your invoice — please pay by bank transfer below or contact Jeff directly.
+                </p>
+              )}
+            </div>
           )}
+
           <div>
             <p className="text-xs tracking-[0.1em] uppercase text-[#888] mb-2">How to pay</p>
             <p className="text-sm text-[#888] leading-relaxed">
-              {zoho?.url
+              {canPay
                 ? 'Pay securely online using the button above, or by bank transfer using your names and wedding date as the reference.'
                 : 'Please pay by bank transfer using your names and wedding date as the reference, then drop us an email to confirm.'}
             </p>
           </div>
+
         </div>
       )}
 
