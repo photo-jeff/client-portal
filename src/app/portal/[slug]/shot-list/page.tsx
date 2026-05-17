@@ -39,6 +39,7 @@ export default async function ShotListPage({
         slug={slug}
         partner1={client.partner1_name}
         partner2={client.partner2_name}
+        weddingDate={client.wedding_date ?? null}
         existingList={existingList}
       />
     </div>
