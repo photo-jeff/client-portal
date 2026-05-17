@@ -73,7 +73,7 @@ export default async function VenueInfoPage({
               <dd>Jeff Oliver</dd>
             </div>
             <div className="py-3 flex gap-8">
-              <dt className="text-xs tracking-[0.1em] uppercase text-[#888] w-40 shrink-0 pt-0.5">Second shooter</dt>
+              <dt className="text-xs tracking-[0.1em] uppercase text-[#888] w-40 shrink-0 pt-0.5">Co-photographer</dt>
               <dd>Sarah</dd>
             </div>
             <div className="py-3 flex gap-8">
