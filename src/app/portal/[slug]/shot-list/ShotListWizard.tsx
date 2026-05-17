@@ -32,22 +32,28 @@ export function ShotListWizard({ slug, partner1, partner2, existingList }: Props
   async function startConversation() {
     setStarted(true)
     setLoading(true)
+    // Pass names upfront so Claude never asks for them
+    const openingMsg = `Hi! We're ${partner1} and ${partner2} and we'd like to build our group shot list please.`
     try {
       const res = await fetch('/api/portal/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          messages: [{ role: 'user', content: "Hello, we'd like to build our shot list please." }],
-        }),
+        body: JSON.stringify({ messages: [{ role: 'user', content: openingMsg }] }),
       })
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}))
+        throw new Error(err.error || `Service error (${res.status})`)
+      }
       const data = await res.json()
-      const reply = data.content?.find((b: { type: string }) => b.type === 'text')?.text ?? ''
+      const reply = data.content?.find((b: { type: string }) => b.type === 'text')?.text
+      if (!reply) throw new Error('Empty response from AI')
       setMessages([
-        { role: 'user', content: "Hello, we'd like to build our shot list please.", hidden: true },
+        { role: 'user', content: openingMsg, hidden: true },
         { role: 'assistant', content: reply },
       ])
-    } catch {
-      setMessages([{ role: 'assistant', content: 'Sorry, something went wrong. Please try again.' }])
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : 'Something went wrong'
+      setMessages([{ role: 'assistant', content: `Sorry — ${msg}. Please try again in a moment.` }])
     }
     setLoading(false)
   }
@@ -78,10 +84,15 @@ export function ShotListWizard({ slug, partner1, partner2, existingList }: Props
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ messages: cleaned }),
       })
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}))
+        throw new Error(err.error || `Service error (${res.status})`)
+      }
       const data = await res.json()
-      const reply = data.content?.find((b: { type: string }) => b.type === 'text')?.text ?? ''
+      const reply = data.content?.find((b: { type: string }) => b.type === 'text')?.text
+      if (!reply) throw new Error('Empty response from AI')
 
-      if (reply.includes('YOUR SHOT LIST IS READY:')) {
+      if (reply!.includes('YOUR SHOT LIST IS READY:')) {
         const [before, after] = reply.split('YOUR SHOT LIST IS READY:')
         const listText = after.trim()
         setShotListReady(listText)

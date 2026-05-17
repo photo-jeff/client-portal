@@ -9,6 +9,10 @@ interface BalanceData {
   outstanding: number | null
 }
 
+interface ZohoData {
+  url: string | null
+}
+
 function fmt(n: number) {
   return '£' + n.toLocaleString('en-GB', { minimumFractionDigits: 2 })
 }
@@ -49,12 +53,18 @@ function Box({
 
 export function InvoiceList({ slug }: { slug: string }) {
   const [data, setData] = useState<BalanceData | undefined>(undefined)
+  const [zoho, setZoho] = useState<ZohoData | undefined>(undefined)
 
   useEffect(() => {
     fetch(`/api/portal/balance?slug=${slug}`)
       .then(r => r.json())
       .then(d => setData(d))
       .catch(() => setData({ total: null, outstanding: null }))
+
+    fetch(`/api/portal/zoho-invoice?slug=${slug}`)
+      .then(r => r.json())
+      .then(d => setZoho(d))
+      .catch(() => setZoho({ url: null }))
   }, [slug])
 
   const loading = data === undefined
@@ -103,11 +113,25 @@ export function InvoiceList({ slug }: { slug: string }) {
       />
 
       {outstanding !== null && outstanding > 0 && (
-        <div className="bg-[#faf9f7] border border-[#e0ddd8] p-5">
-          <p className="text-xs tracking-[0.1em] uppercase text-[#888] mb-2">How to pay</p>
-          <p className="text-sm text-[#888] leading-relaxed">
-            Please pay by bank transfer using your names and wedding date as the reference, then drop us an email to confirm.
-          </p>
+        <div className="bg-[#faf9f7] border border-[#e0ddd8] p-5 space-y-4">
+          {zoho?.url && (
+            <a
+              href={zoho.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white text-xs tracking-[0.12em] uppercase font-medium px-6 py-3 transition-colors"
+            >
+              Pay Here →
+            </a>
+          )}
+          <div>
+            <p className="text-xs tracking-[0.1em] uppercase text-[#888] mb-2">How to pay</p>
+            <p className="text-sm text-[#888] leading-relaxed">
+              {zoho?.url
+                ? 'Pay securely online using the button above, or by bank transfer using your names and wedding date as the reference.'
+                : 'Please pay by bank transfer using your names and wedding date as the reference, then drop us an email to confirm.'}
+            </p>
+          </div>
         </div>
       )}
 
