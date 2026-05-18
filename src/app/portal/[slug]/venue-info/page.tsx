@@ -1,5 +1,6 @@
 import { createAdminClient } from '@/lib/supabase/admin'
 import { Divider } from '@/components/ui/Divider'
+import { CopyButton } from '@/components/ui/CopyButton'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { ChevronLeft, Download } from 'lucide-react'
@@ -29,19 +30,14 @@ export default async function VenueInfoPage({
 
   const { data: client } = await admin
     .from('clients')
-    .select('ceremony_time, ceremony_venue, partner1_name, partner2_name')
+    .select('ceremony_time, ceremony_venue')
     .eq('portal_slug', slug)
     .single()
 
   if (!client) notFound()
 
-  // Arrival = ceremony time minus 2.5 hours (150 minutes)
   const arrivalTime = client.ceremony_time
     ? formatTime(addMinutes(client.ceremony_time, -150))
-    : null
-
-  const dressBy = client.ceremony_time
-    ? formatTime(addMinutes(client.ceremony_time, -90))
     : null
 
   return (
@@ -69,12 +65,8 @@ export default async function VenueInfoPage({
               <dd>Jeff Oliver Photography</dd>
             </div>
             <div className="py-3 flex gap-8">
-              <dt className="text-xs tracking-[0.1em] uppercase text-[#919295] w-40 shrink-0 pt-0.5">Lead photographer</dt>
-              <dd>Jeff Oliver</dd>
-            </div>
-            <div className="py-3 flex gap-8">
-              <dt className="text-xs tracking-[0.1em] uppercase text-[#919295] w-40 shrink-0 pt-0.5">Co-photographer</dt>
-              <dd>Sarah</dd>
+              <dt className="text-xs tracking-[0.1em] uppercase text-[#919295] w-40 shrink-0 pt-0.5">Photographers</dt>
+              <dd>Jeff &amp; Sarah Oliver</dd>
             </div>
             <div className="py-3 flex gap-8">
               <dt className="text-xs tracking-[0.1em] uppercase text-[#919295] w-40 shrink-0 pt-0.5">Vehicle registration</dt>
@@ -95,43 +87,6 @@ export default async function VenueInfoPage({
           </dl>
         </section>
 
-        {/* Bridal prep notes */}
-        <section className="bg-white border border-[#e0ddd8] p-8 rounded-2xl space-y-5">
-          <h2 className="font-serif text-2xl">Bridal Preparations</h2>
-          <p className="text-sm text-[#919295] leading-relaxed">
-            We arrive two hours before {client.partner1_name} leaves for the ceremony. The first hour is for detail shots — the dress, shoes, rings, jewellery — alongside natural getting-ready moments. We need {client.partner1_name} in her dress one hour before leaving, which gives us time for bridal portraits and photos with the bridesmaids.
-          </p>
-          {arrivalTime && dressBy && (
-            <div className="bg-[#faf9f7] border border-[#e0ddd8] p-5 rounded-xl grid grid-cols-2 gap-4 text-sm">
-              <div>
-                <p className="text-xs tracking-[0.1em] uppercase text-[#919295] mb-1">We arrive</p>
-                <p className="font-serif text-2xl">{arrivalTime}</p>
-              </div>
-              <div>
-                <p className="text-xs tracking-[0.1em] uppercase text-[#919295] mb-1">{client.partner1_name} in dress by</p>
-                <p className="font-serif text-2xl">{dressBy}</p>
-              </div>
-            </div>
-          )}
-          <div className="border-t border-[#f0ede8] pt-5">
-            <h3 className="text-xs tracking-[0.12em] uppercase text-[#919295] mb-3">A few things that help on the morning</h3>
-            <ul className="space-y-2 text-sm text-[#919295]">
-              {[
-                'A tidy room and natural light from a window makes a big difference — please clear a little space if you can.',
-                "Please ask the bride not to put on any jewellery or perfume until we arrive — we love photographing that fresh first moment.",
-                'Gather all the detail items in one place: shoes, rings, garter, perfume, invitations.',
-                'Avoid tight-fitting clothes on the morning — especially important if the dress is backless.',
-                'Professional hair and makeup photographs beautifully and keeps the morning running to time.',
-              ].map((tip, i) => (
-                <li key={i} className="flex gap-3">
-                  <span className="text-[#ccc] shrink-0 mt-0.5">—</span>
-                  <span>{tip}</span>
-                </li>
-              ))}
-            </ul>
-          </div>
-        </section>
-
         {/* Insurance documents */}
         <section className="bg-white border border-[#e0ddd8] p-8 rounded-2xl">
           <h2 className="font-serif text-2xl mb-4">Insurance Documents</h2>
@@ -150,12 +105,26 @@ export default async function VenueInfoPage({
                 key={doc.file}
                 href={`/insurance/${doc.file}`}
                 download
-                className="flex items-center justify-between py-3 px-4 border border-[#e0ddd8] hover:border-[#535353] transition-colors group"
+                className="flex items-center justify-between py-3 px-4 border border-[#e0ddd8] hover:border-[#535353] transition-colors group rounded-lg"
               >
                 <span className="text-sm">{doc.label}</span>
                 <Download size={14} className="text-[#c2c5c8] group-hover:text-[#535353] transition-colors" />
               </a>
             ))}
+          </div>
+        </section>
+
+        {/* Share with venue */}
+        <section className="bg-[#faf9f7] border border-[#e0ddd8] p-8 rounded-2xl">
+          <h2 className="font-serif text-2xl mb-3">Share With Your Venue</h2>
+          <p className="text-sm text-[#919295] mb-5 leading-relaxed">
+            Use the link below to share just this page with your venue coordinator — it contains only the photographer details and insurance documents, nothing else from your portal.
+          </p>
+          <div className="flex items-center gap-3 bg-white border border-[#e0ddd8] px-4 py-3 rounded-lg">
+            <span className="text-sm text-[#535353] flex-1 break-all">
+              {`https://portal.jeffoliverphotography.com/venue/${slug}`}
+            </span>
+            <CopyButton text={`https://portal.jeffoliverphotography.com/venue/${slug}`} />
           </div>
         </section>
 
