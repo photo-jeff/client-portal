@@ -56,11 +56,10 @@ export default async function WeddingDetailsPage({
           <DetailRow label="Ceremony time" value={client.ceremony_time} />
           <DetailRow label="Reception venue" value={client.reception_venue} />
           <DetailRow label="Package" value={client.package_name} />
-          <DetailRow label="Lead photographer" value="Jeff Oliver" />
         </dl>
       </Card>
 
-      <div className="mt-6 bg-[#faf9f7] border border-[#e0ddd8] p-6">
+      <div className="mt-6 bg-[#faf9f7] border border-[#e0ddd8] p-6 rounded-xl">
         <p className="text-xs tracking-[0.1em] uppercase text-[#919295] mb-2">Need to update something?</p>
         <p className="text-sm text-[#919295]">
           If any details are incorrect, please get in touch at{' '}

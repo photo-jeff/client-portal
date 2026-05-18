@@ -12,7 +12,7 @@ interface SectionCardProps {
 export function SectionCard({ title, description, href, completed, required }: SectionCardProps) {
   return (
     <Link href={href} className="group block h-full">
-      <div className="h-full border border-[#e0ddd8] group-hover:border-[#535353] transition-all duration-200 p-7">
+      <div className="h-full border border-[#e0ddd8] group-hover:border-[#535353] transition-all duration-200 p-7 rounded-2xl">
         <div className="flex items-start justify-between mb-4">
           <div className="flex items-center gap-2">
             {completed

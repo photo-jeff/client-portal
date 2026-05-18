@@ -103,7 +103,7 @@ export function QuestionnaireForm({
 
   if (submitted) {
     return (
-      <div className="bg-white border border-[#e0ddd8] p-10 text-center space-y-4">
+      <div className="bg-white border border-[#e0ddd8] p-10 rounded-2xl text-center space-y-4">
         <CheckCircle size={32} className="mx-auto text-[#535353]" />
         <h2 className="font-serif text-2xl">Thank you!</h2>
         <p className="text-sm text-[#919295]">
@@ -131,7 +131,7 @@ export function QuestionnaireForm({
         ))}
       </div>
 
-      <div className="bg-white border border-[#e0ddd8] p-8 space-y-8">
+      <div className="bg-white border border-[#e0ddd8] p-8 rounded-2xl space-y-8">
 
         {/* ── STEP 1: YOUR DAY ── */}
         {step === 0 && (
@@ -203,7 +203,7 @@ export function QuestionnaireForm({
             </div>
 
             {timings && (
-              <div className="bg-[#faf9f7] border border-[#e0ddd8] p-5 space-y-3">
+              <div className="bg-[#faf9f7] border border-[#e0ddd8] p-5 rounded-xl space-y-3">
                 <p className="text-xs tracking-[0.1em] uppercase text-[#919295] flex items-center gap-2">
                   <Clock size={12} /> Your personalised timings
                 </p>
@@ -352,7 +352,7 @@ export function QuestionnaireForm({
         {step === 2 && (
           <>
             {daysUntil !== null && daysUntil > 60 ? (
-              <div className="bg-[#faf9f7] border border-[#e0ddd8] p-5 text-center space-y-2">
+              <div className="bg-[#faf9f7] border border-[#e0ddd8] p-5 rounded-xl text-center space-y-2">
                 <p className="text-sm text-[#919295]">
                   Nothing to worry about yet — supplier details can be filled in closer to the day.
                 </p>

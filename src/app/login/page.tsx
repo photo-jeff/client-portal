@@ -25,12 +25,12 @@ export default function LoginPage() {
           <img
             src="/JOP Logo.svg"
             alt="Jeff Oliver Photography"
-            className="h-5 w-auto mx-auto mb-4"
+            className="h-8 w-auto mx-auto mb-4"
           />
           <Divider />
           <p className="text-xs tracking-[0.15em] uppercase text-[#919295] mt-4 mb-10">Client Portal</p>
 
-          <div className="bg-white border border-[#e0ddd8] p-10">
+          <div className="bg-white border border-[#e0ddd8] p-10 rounded-2xl">
             <h2 className="font-serif text-2xl mb-2">Welcome</h2>
             <p className="text-sm text-[#919295] mb-8">
               Enter your email address and we&apos;ll send you a secure sign-in link.

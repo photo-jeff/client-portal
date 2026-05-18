@@ -30,7 +30,7 @@ function Box({
   status?: 'paid' | 'outstanding' | null
 }) {
   return (
-    <div className="bg-white border border-[#e0ddd8] p-6">
+    <div className="bg-white border border-[#e0ddd8] p-6 rounded-2xl">
       <p className="text-xs tracking-[0.1em] uppercase text-[#919295] mb-2">{label}</p>
       <div className="flex items-end justify-between gap-4">
         <p className="font-serif text-3xl leading-none">{value}</p>
@@ -147,7 +147,7 @@ export function InvoiceList({ slug }: { slug: string }) {
       />
 
       {outstanding !== null && outstanding > 0 && (
-        <div className="bg-[#faf9f7] border border-[#e0ddd8] p-5 space-y-4">
+        <div className="bg-[#faf9f7] border border-[#e0ddd8] p-5 rounded-xl space-y-4">
 
           {!zohoLoading && canPay && (
             <div className="space-y-2">
