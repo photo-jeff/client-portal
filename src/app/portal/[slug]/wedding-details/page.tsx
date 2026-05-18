@@ -9,8 +9,8 @@ function DetailRow({ label, value }: { label: string; value?: string | null }) {
   if (!value) return null
   return (
     <div className="py-4 border-b border-[#f0ede8] last:border-0 flex flex-col sm:flex-row sm:gap-8">
-      <dt className="text-xs tracking-[0.1em] uppercase text-[#888] sm:w-40 flex-shrink-0">{label}</dt>
-      <dd className="text-sm text-[#1a1a1a] mt-1 sm:mt-0">{value}</dd>
+      <dt className="text-xs tracking-[0.1em] uppercase text-[#919295] sm:w-40 flex-shrink-0">{label}</dt>
+      <dd className="text-sm text-[#535353] mt-1 sm:mt-0">{value}</dd>
     </div>
   )
 }
@@ -39,7 +39,7 @@ export default async function WeddingDetailsPage({
 
   return (
     <div className="max-w-2xl mx-auto">
-      <Link href={`/portal/${slug}`} className="inline-flex items-center gap-2 text-xs tracking-[0.1em] uppercase text-[#888] hover:text-[#1a1a1a] mb-8 transition-colors">
+      <Link href={`/portal/${slug}`} className="inline-flex items-center gap-2 text-xs tracking-[0.1em] uppercase text-[#919295] hover:text-[#535353] mb-8 transition-colors">
         <ChevronLeft size={14} /> Back
       </Link>
 
@@ -61,10 +61,10 @@ export default async function WeddingDetailsPage({
       </Card>
 
       <div className="mt-6 bg-[#faf9f7] border border-[#e0ddd8] p-6">
-        <p className="text-xs tracking-[0.1em] uppercase text-[#888] mb-2">Need to update something?</p>
-        <p className="text-sm text-[#888]">
+        <p className="text-xs tracking-[0.1em] uppercase text-[#919295] mb-2">Need to update something?</p>
+        <p className="text-sm text-[#919295]">
           If any details are incorrect, please get in touch at{' '}
-          <a href="mailto:hello@jeffoliverphotography.com" className="underline hover:text-[#1a1a1a]">
+          <a href="mailto:hello@jeffoliverphotography.com" className="underline hover:text-[#535353]">
             hello@jeffoliverphotography.com
           </a>
         </p>

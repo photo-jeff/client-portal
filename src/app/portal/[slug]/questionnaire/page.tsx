@@ -33,13 +33,13 @@ export default async function QuestionnairePage({
 
   return (
     <div className="max-w-2xl mx-auto">
-      <Link href={`/portal/${slug}`} className="inline-flex items-center gap-2 text-xs tracking-[0.1em] uppercase text-[#888] hover:text-[#1a1a1a] mb-8 transition-colors">
+      <Link href={`/portal/${slug}`} className="inline-flex items-center gap-2 text-xs tracking-[0.1em] uppercase text-[#919295] hover:text-[#535353] mb-8 transition-colors">
         <ChevronLeft size={14} /> Back
       </Link>
       <div className="text-center mb-10">
         <h1 className="font-serif text-4xl mb-2">Questionnaire</h1>
         <Divider />
-        <p className="text-sm text-[#888] mt-4 max-w-md mx-auto">
+        <p className="text-sm text-[#919295] mt-4 max-w-md mx-auto">
           Your answers help us plan the perfect coverage. The more we know, the better prepared we are for your day.
         </p>
       </div>

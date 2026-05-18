@@ -58,21 +58,21 @@ export default async function PortalDashboard({
     <div className="max-w-2xl mx-auto">
       {/* Welcome header */}
       <div className="text-center mb-12">
-        <p className="text-xs tracking-[0.15em] uppercase text-[#888] mb-3">Welcome to your portal</p>
+        <p className="font-display text-[0.6rem] tracking-[0.2em] uppercase text-[#919295] mb-3">Welcome to your portal</p>
         <h1 className="font-serif text-5xl mb-3">
           {client.partner1_name} &amp; {client.partner2_name}
         </h1>
         <Divider />
         {weddingDate && (
-          <p className="text-sm text-[#888] mt-4">{weddingDate}</p>
+          <p className="text-sm text-[#919295] mt-4">{weddingDate}</p>
         )}
         {daysUntil !== null && daysUntil > 0 && (
-          <p className="text-xs tracking-[0.1em] uppercase text-[#aaa] mt-1">
+          <p className="text-xs tracking-[0.1em] uppercase text-[#b5b8ba] mt-1">
             {daysUntil} days to go
           </p>
         )}
         {daysUntil !== null && daysUntil <= 0 && (
-          <p className="text-xs tracking-[0.1em] uppercase text-[#aaa] mt-1">
+          <p className="text-xs tracking-[0.1em] uppercase text-[#b5b8ba] mt-1">
             What a day — thank you for having us
           </p>
         )}
@@ -81,18 +81,18 @@ export default async function PortalDashboard({
       {/* Pre-wedding shoot banner */}
       {isAlbumPackage && daysUntil !== null && daysUntil > 0 && (
         <div className="mb-6 bg-[#1a1a1a] text-white p-6 flex items-start gap-4">
-          <CalendarHeart size={20} className="shrink-0 mt-0.5 text-[#aaa]" />
+          <CalendarHeart size={20} className="shrink-0 mt-0.5 text-[#b5b8ba]" />
           <div>
-            <p className="text-xs tracking-[0.12em] uppercase text-[#aaa] mb-1">Your {client.package_name} includes</p>
+            <p className="text-xs tracking-[0.12em] uppercase text-[#b5b8ba] mb-1">Your {client.package_name} includes</p>
             <p className="font-serif text-lg mb-2">Pre-Wedding Shoot</p>
-            <p className="text-sm text-[#aaa] mb-4">
+            <p className="text-sm text-[#b5b8ba] mb-4">
               A relaxed shoot in the months before your wedding — a chance to get comfortable in front of the camera before the big day.
             </p>
             <a
               href="https://calendly.com/jeffoliverphoto/pre-wed-shoot"
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-block text-xs tracking-[0.1em] uppercase border border-white/40 px-4 py-2 hover:bg-white hover:text-[#1a1a1a] transition-colors"
+              className="inline-block text-xs tracking-[0.1em] uppercase border border-white/40 px-4 py-2 hover:bg-white hover:text-[#535353] transition-colors"
             >
               Book your shoot →
             </a>
@@ -141,9 +141,9 @@ export default async function PortalDashboard({
         />
       </div>
 
-      <p className="text-center text-xs text-[#aaa] mt-10">
+      <p className="text-center text-xs text-[#b5b8ba] mt-10">
         Questions? Get in touch at{' '}
-        <a href="mailto:hello@jeffoliverphotography.com" className="underline hover:text-[#1a1a1a]">
+        <a href="mailto:hello@jeffoliverphotography.com" className="underline hover:text-[#535353]">
           hello@jeffoliverphotography.com
         </a>
       </p>

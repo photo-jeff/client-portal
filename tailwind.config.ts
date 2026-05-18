@@ -9,14 +9,16 @@ export default {
   theme: {
     extend: {
       fontFamily: {
-        serif: ["Cormorant Garamond", "Georgia", "serif"],
-        sans: ["Inter", "system-ui", "sans-serif"],
+        display: ["var(--font-display)", "Cinzel", "Georgia", "serif"],
+        serif: ["var(--font-serif)", "Prata", "Georgia", "serif"],
+        sans: ["var(--font-sans)", "Inter", "system-ui", "sans-serif"],
       },
       colors: {
-        charcoal: "#1a1a1a",
-        stone: "#888888",
+        ink: "#535353",
+        muted: "#919295",
+        faint: "#b5b8ba",
         border: "#e0ddd8",
-        cream: "#faf9f7",
+        gold: "#C9A96E",
       },
       letterSpacing: {
         widest: "0.2em",
