@@ -4,6 +4,7 @@ import { redirect, notFound } from 'next/navigation'
 import Link from 'next/link'
 import { Divider } from '@/components/ui/Divider'
 import { Button } from '@/components/ui/Button'
+import { ClientIdFields } from './ClientIdFields'
 
 export default async function ClientDetailPage(props: { params: Promise<{ id: string }> }) {
   const { id } = await props.params
@@ -86,18 +87,11 @@ export default async function ClientDetailPage(props: { params: Promise<{ id: st
               <dt className="text-xs tracking-[0.1em] uppercase text-[#888] mb-1">Invite sent</dt>
               <dd>{client.invite_sent_at ? new Date(client.invite_sent_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'Not yet'}</dd>
             </div>
-            {client.vsco_job_id && (
-              <div>
-                <dt className="text-xs tracking-[0.1em] uppercase text-[#888] mb-1">VSCO Job ID</dt>
-                <dd>{client.vsco_job_id}</dd>
-              </div>
-            )}
-            {client.zoho_contact_id && (
-              <div>
-                <dt className="text-xs tracking-[0.1em] uppercase text-[#888] mb-1">Zoho Contact ID</dt>
-                <dd>{client.zoho_contact_id}</dd>
-              </div>
-            )}
+            <ClientIdFields
+              clientId={client.id}
+              vscoJobId={client.vsco_job_id ?? null}
+              zohoContactId={(client as Record<string, unknown>).zoho_contact_id as string | null}
+            />
           </dl>
         </section>
 

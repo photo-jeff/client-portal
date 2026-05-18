@@ -11,10 +11,11 @@ interface Props {
   slug: string
   partner1: string
   partner2: string
+  weddingDate: string | null
   existingList: string | null
 }
 
-export function ShotListWizard({ slug, partner1, partner2, existingList }: Props) {
+export function ShotListWizard({ slug, partner1, partner2, weddingDate, existingList }: Props) {
   const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
@@ -32,8 +33,11 @@ export function ShotListWizard({ slug, partner1, partner2, existingList }: Props
   async function startConversation() {
     setStarted(true)
     setLoading(true)
-    // Pass names upfront so Claude never asks for them
-    const openingMsg = `Hi! We're ${partner1} and ${partner2} and we'd like to build our group shot list please.`
+    // Pass names and date upfront so Claude never asks for them
+    const dateStr = weddingDate
+      ? new Date(weddingDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })
+      : null
+    const openingMsg = `Hi! We're ${partner1} and ${partner2} and we'd like to build our group shot list please.${dateStr ? ` Our wedding date is ${dateStr}.` : ''}`
     try {
       const res = await fetch('/api/portal/chat', {
         method: 'POST',
