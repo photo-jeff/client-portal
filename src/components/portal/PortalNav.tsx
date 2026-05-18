@@ -22,12 +22,15 @@ export function PortalNav({ slug, partnerNames }: NavProps) {
 
   return (
     <header className="bg-white border-b border-[#e0ddd8]">
-      <div className="max-w-5xl mx-auto px-6 py-5 flex items-center justify-between">
-        <div className="flex items-center gap-6">
-          <Link href={base} className="font-display text-base tracking-[0.12em] uppercase text-[#535353]">
-            Jeff Oliver Photography
-          </Link>
-        </div>
+      <div className="max-w-5xl mx-auto px-6 py-4 flex items-center justify-between">
+        <Link href={base} className="flex items-center shrink-0">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/JOP Logo.svg"
+            alt="Jeff Oliver Photography"
+            className="h-6 w-auto"
+          />
+        </Link>
         <p className="text-xs tracking-[0.12em] uppercase text-[#919295]">{partnerNames}</p>
       </div>
       <nav className="border-t border-[#e0ddd8]">
