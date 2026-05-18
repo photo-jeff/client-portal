@@ -1,22 +1,32 @@
 @import "tailwindcss";
 
 :root {
+  --font-display: var(--font-display);
   --font-serif: var(--font-serif);
   --font-sans: var(--font-sans);
+  --color-ink: #535353;
+  --color-muted: #919295;
+  --color-faint: #b5b8ba;
+  --color-border: #e0ddd8;
+  --color-gold: #C9A96E;
 }
 
 body {
   font-family: var(--font-sans, Inter, system-ui, sans-serif);
-  background-color: #faf9f7;
-  color: #1a1a1a;
+  background-color: #ffffff;
+  color: #535353;
   font-size: 15px;
   line-height: 1.7;
   -webkit-font-smoothing: antialiased;
 }
 
 h1, h2, h3, h4 {
-  font-family: var(--font-serif, 'Cormorant Garamond', Georgia, serif);
+  font-family: var(--font-serif, 'Prata', Georgia, serif);
   font-weight: 400;
   line-height: 1.2;
   letter-spacing: 0.01em;
+}
+
+.font-display {
+  font-family: var(--font-display, 'Cinzel', Georgia, serif);
 }

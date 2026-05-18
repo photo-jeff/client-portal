@@ -23,7 +23,7 @@ export default async function PortalLayout({
   const partnerNames = `${client.partner1_name} & ${client.partner2_name}`
 
   return (
-    <div className="min-h-screen" style={{ background: '#faf9f7' }}>
+    <div className="min-h-screen" style={{ background: '#ffffff' }}>
       <PortalNav slug={slug} partnerNames={partnerNames} />
       <main className="max-w-5xl mx-auto px-6 py-12">
         {children}

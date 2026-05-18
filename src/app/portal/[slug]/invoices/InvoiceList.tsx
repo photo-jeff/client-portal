@@ -31,7 +31,7 @@ function Box({
 }) {
   return (
     <div className="bg-white border border-[#e0ddd8] p-6">
-      <p className="text-xs tracking-[0.1em] uppercase text-[#888] mb-2">{label}</p>
+      <p className="text-xs tracking-[0.1em] uppercase text-[#919295] mb-2">{label}</p>
       <div className="flex items-end justify-between gap-4">
         <p className="font-serif text-3xl leading-none">{value}</p>
         {status === 'paid' && (
@@ -41,13 +41,13 @@ function Box({
           </div>
         )}
         {status === 'outstanding' && (
-          <div className="flex items-center gap-1.5 text-[#888] shrink-0">
+          <div className="flex items-center gap-1.5 text-[#919295] shrink-0">
             <Clock size={15} />
             <span className="text-xs tracking-[0.08em] uppercase">Outstanding</span>
           </div>
         )}
       </div>
-      {sub && <p className="text-xs text-[#aaa] mt-2">{sub}</p>}
+      {sub && <p className="text-xs text-[#b5b8ba] mt-2">{sub}</p>}
     </div>
   )
 }
@@ -114,7 +114,7 @@ export function InvoiceList({ slug }: { slug: string }) {
       {/* 1. Total cost */}
       <Box
         label="Total package cost"
-        value={loading ? <span className="text-[#ccc]">Loading…</span> : total !== null ? fmt(total) : <span className="text-[#ccc]">—</span>}
+        value={loading ? <span className="text-[#d0d3d6]">Loading…</span> : total !== null ? fmt(total) : <span className="text-[#d0d3d6]">—</span>}
       />
 
       {/* 2. Booking deposit */}
@@ -128,7 +128,7 @@ export function InvoiceList({ slug }: { slug: string }) {
       {/* 3. Remaining balance */}
       <Box
         label="Remaining balance"
-        value={loading ? <span className="text-[#ccc]">Loading…</span> : remaining !== null ? fmt(remaining) : <span className="text-[#ccc]">—</span>}
+        value={loading ? <span className="text-[#d0d3d6]">Loading…</span> : remaining !== null ? fmt(remaining) : <span className="text-[#d0d3d6]">—</span>}
         sub={remaining !== null ? 'Total package cost minus your deposit' : undefined}
       />
 
@@ -137,10 +137,10 @@ export function InvoiceList({ slug }: { slug: string }) {
         label="Final balance"
         value={
           loading
-            ? <span className="text-[#ccc]">Loading…</span>
+            ? <span className="text-[#d0d3d6]">Loading…</span>
             : outstanding !== null
             ? fmt(outstanding)
-            : <span className="text-[#ccc]">—</span>
+            : <span className="text-[#d0d3d6]">—</span>
         }
         sub={outstanding === 0 ? 'All paid — thank you!' : outstanding !== null ? 'Amount currently outstanding' : undefined}
         status={outstanding === 0 ? 'paid' : outstanding !== null && outstanding > 0 ? 'outstanding' : null}
@@ -167,8 +167,8 @@ export function InvoiceList({ slug }: { slug: string }) {
           )}
 
           <div>
-            <p className="text-xs tracking-[0.1em] uppercase text-[#888] mb-2">How to pay</p>
-            <p className="text-sm text-[#888] leading-relaxed">
+            <p className="text-xs tracking-[0.1em] uppercase text-[#919295] mb-2">How to pay</p>
+            <p className="text-sm text-[#919295] leading-relaxed">
               {canPay
                 ? 'Pay securely online using the button above, or by bank transfer using your names and wedding date as the reference.'
                 : 'Please pay by bank transfer using your names and wedding date as the reference, then drop us an email to confirm.'}
