@@ -59,7 +59,7 @@ export default async function PortalDashboard({
       {/* Welcome header */}
       <div className="text-center mb-12">
         <p className="font-display text-[0.6rem] tracking-[0.2em] uppercase text-[#919295] mb-3">Welcome to your portal</p>
-        <h1 className="font-serif text-5xl mb-3">
+        <h1 className="font-serif text-3xl mb-3">
           {client.partner1_name} &amp; {client.partner2_name}
         </h1>
         <Divider />
@@ -143,17 +143,18 @@ export default async function PortalDashboard({
 
       {/* Photo triptych */}
       <div className="grid grid-cols-3 gap-2 mt-10">
-        {[
-          { src: '/M_and_D-008.jpg', alt: '' },
-          { src: '/B_and_L-019.jpg', alt: '' },
-          { src: '/R_and_J-19.jpg', alt: '' },
-        ].map(({ src, alt }) => (
-          <div key={src} className="relative overflow-hidden" style={{ paddingBottom: '133%' }}>
+        {([
+          { src: '/M_and_D-008.jpg', position: '50% 30%' },
+          { src: '/B_and_L-019.jpg', position: '50% 40%' },
+          { src: '/R_and_J-19.jpg', position: '35% 50%' },
+        ] as { src: string; position: string }[]).map(({ src, position }) => (
+          <div key={src} className="relative overflow-hidden rounded-2xl" style={{ paddingBottom: '133%' }}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
               src={src}
-              alt={alt}
+              alt=""
               className="absolute inset-0 w-full h-full object-cover"
+              style={{ objectPosition: position }}
             />
           </div>
         ))}
