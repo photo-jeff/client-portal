@@ -141,6 +141,24 @@ export default async function PortalDashboard({
         />
       </div>
 
+      {/* Photo triptych */}
+      <div className="grid grid-cols-3 gap-2 mt-10">
+        {[
+          { src: '/M_and_D-008.jpg', alt: '' },
+          { src: '/B_and_L-019.jpg', alt: '' },
+          { src: '/R_and_J-19.jpg', alt: '' },
+        ].map(({ src, alt }) => (
+          <div key={src} className="relative overflow-hidden" style={{ paddingBottom: '133%' }}>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={src}
+              alt={alt}
+              className="absolute inset-0 w-full h-full object-cover"
+            />
+          </div>
+        ))}
+      </div>
+
       <p className="text-center text-xs text-[#b5b8ba] mt-10">
         Questions? Get in touch at{' '}
         <a href="mailto:hello@jeffoliverphotography.com" className="underline hover:text-[#535353]">

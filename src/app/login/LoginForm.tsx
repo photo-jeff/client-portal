@@ -32,14 +32,14 @@ export function LoginForm() {
   if (sent) {
     return (
       <div className="text-center space-y-3">
-        <div className="w-12 h-12 border border-[#1a1a1a] flex items-center justify-center mx-auto mb-4">
+        <div className="w-12 h-12 border border-[#535353] flex items-center justify-center mx-auto mb-4">
           <span className="text-lg">✓</span>
         </div>
         <p className="font-serif text-xl">Check your email</p>
-        <p className="text-sm text-[#888]">
+        <p className="text-sm text-[#919295]">
           We've sent a sign-in link to <strong>{email}</strong>
         </p>
-        <p className="text-xs text-[#aaa] mt-4">The link expires in 1 hour.</p>
+        <p className="text-xs text-[#b5b8ba] mt-4">The link expires in 1 hour.</p>
       </div>
     )
   }
