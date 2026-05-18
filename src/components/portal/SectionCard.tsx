@@ -32,8 +32,8 @@ export function SectionCard({ title, description, href, completed, required }: S
           </div>
           <ChevronRight size={14} className="text-[#c2c5c8] group-hover:text-[#535353] transition-colors shrink-0" />
         </div>
-        <h3 className="font-display text-xs tracking-[0.15em] uppercase text-[#535353] mb-2">{title}</h3>
-        <p className="text-xs text-[#919295] leading-relaxed">{description}</p>
+        <h3 className="font-display text-sm tracking-[0.12em] uppercase text-[#535353] mb-2">{title}</h3>
+        <p className="text-sm text-[#919295] leading-relaxed">{description}</p>
       </div>
     </Link>
   )
