@@ -101,7 +101,7 @@ export default async function PortalDashboard({
       )}
 
       {/* Sections */}
-      <div className="bg-white border border-[#e0ddd8] px-8">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         <SectionCard
           title="Wedding Details"
           description="Your venue, ceremony times, and key information."
