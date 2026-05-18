@@ -80,7 +80,7 @@ export default async function PortalDashboard({
 
       {/* Pre-wedding shoot banner */}
       {isAlbumPackage && daysUntil !== null && daysUntil > 0 && (
-        <div className="mb-6 bg-[#1a1a1a] text-white p-6 flex items-start gap-4">
+        <div className="mb-6 bg-[#1a1a1a] text-white p-6 flex items-start gap-4 rounded-2xl">
           <CalendarHeart size={20} className="shrink-0 mt-0.5 text-[#b5b8ba]" />
           <div>
             <p className="text-xs tracking-[0.12em] uppercase text-[#b5b8ba] mb-1">Your {client.package_name} includes</p>

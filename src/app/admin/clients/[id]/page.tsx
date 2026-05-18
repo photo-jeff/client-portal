@@ -47,7 +47,7 @@ export default async function ClientDetailPage(props: { params: Promise<{ id: st
       <main className="max-w-4xl mx-auto px-6 py-12 space-y-10">
 
         {/* Client Details */}
-        <section className="bg-white border border-[#e0ddd8] p-8">
+        <section className="bg-white border border-[#e0ddd8] p-8 rounded-2xl">
           <h2 className="font-serif text-xl mb-6">Client Details</h2>
           <Divider />
           <dl className="mt-6 grid grid-cols-2 gap-x-8 gap-y-4 text-sm">
@@ -96,7 +96,7 @@ export default async function ClientDetailPage(props: { params: Promise<{ id: st
         </section>
 
         {/* Questionnaire */}
-        <section className="bg-white border border-[#e0ddd8] p-8">
+        <section className="bg-white border border-[#e0ddd8] p-8 rounded-2xl">
           <div className="flex items-center justify-between mb-6">
             <h2 className="font-serif text-xl">Questionnaire</h2>
             {questionnaire?.completed_at
@@ -123,7 +123,7 @@ export default async function ClientDetailPage(props: { params: Promise<{ id: st
         </section>
 
         {/* Shot List */}
-        <section className="bg-white border border-[#e0ddd8] p-8">
+        <section className="bg-white border border-[#e0ddd8] p-8 rounded-2xl">
           <div className="flex items-center justify-between mb-6">
             <h2 className="font-serif text-xl">Shot List</h2>
             {shotListText && (

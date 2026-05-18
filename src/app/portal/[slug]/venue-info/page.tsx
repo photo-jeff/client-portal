@@ -61,7 +61,7 @@ export default async function VenueInfoPage({
       <div className="space-y-8">
 
         {/* Photographer details */}
-        <section className="bg-white border border-[#e0ddd8] p-8">
+        <section className="bg-white border border-[#e0ddd8] p-8 rounded-2xl">
           <h2 className="font-serif text-2xl mb-6">Photographer Details</h2>
           <dl className="divide-y divide-[#f0ede8] text-sm">
             <div className="py-3 flex gap-8">
@@ -96,13 +96,13 @@ export default async function VenueInfoPage({
         </section>
 
         {/* Bridal prep notes */}
-        <section className="bg-white border border-[#e0ddd8] p-8 space-y-5">
+        <section className="bg-white border border-[#e0ddd8] p-8 rounded-2xl space-y-5">
           <h2 className="font-serif text-2xl">Bridal Preparations</h2>
           <p className="text-sm text-[#919295] leading-relaxed">
             We arrive two hours before {client.partner1_name} leaves for the ceremony. The first hour is for detail shots — the dress, shoes, rings, jewellery — alongside natural getting-ready moments. We need {client.partner1_name} in her dress one hour before leaving, which gives us time for bridal portraits and photos with the bridesmaids.
           </p>
           {arrivalTime && dressBy && (
-            <div className="bg-[#faf9f7] border border-[#e0ddd8] p-5 grid grid-cols-2 gap-4 text-sm">
+            <div className="bg-[#faf9f7] border border-[#e0ddd8] p-5 rounded-xl grid grid-cols-2 gap-4 text-sm">
               <div>
                 <p className="text-xs tracking-[0.1em] uppercase text-[#919295] mb-1">We arrive</p>
                 <p className="font-serif text-2xl">{arrivalTime}</p>
@@ -133,7 +133,7 @@ export default async function VenueInfoPage({
         </section>
 
         {/* Insurance documents */}
-        <section className="bg-white border border-[#e0ddd8] p-8">
+        <section className="bg-white border border-[#e0ddd8] p-8 rounded-2xl">
           <h2 className="font-serif text-2xl mb-4">Insurance Documents</h2>
           <p className="text-sm text-[#919295] mb-6 leading-relaxed">
             Some venues ask for our insurance certificates in advance. Download and forward these directly to your coordinator.
