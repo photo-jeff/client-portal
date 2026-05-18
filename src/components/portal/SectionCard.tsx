@@ -11,29 +11,29 @@ interface SectionCardProps {
 
 export function SectionCard({ title, description, href, completed, required }: SectionCardProps) {
   return (
-    <Link href={href} className="group block">
-      <div className="flex items-center justify-between py-6 border-b border-[#e0ddd8] hover:border-[#535353] transition-colors">
-        <div className="flex items-start gap-4">
-          <div className="mt-0.5 text-[#919295] group-hover:text-[#535353] transition-colors">
+    <Link href={href} className="group block h-full">
+      <div className="h-full border border-[#e0ddd8] group-hover:border-[#535353] transition-all duration-200 p-7">
+        <div className="flex items-start justify-between mb-4">
+          <div className="flex items-center gap-2">
             {completed
-              ? <CheckCircle size={18} className="text-[#535353]" />
-              : <Circle size={18} />
+              ? <CheckCircle size={15} className="text-[#535353] shrink-0" />
+              : <Circle size={15} className="text-[#c2c5c8] group-hover:text-[#919295] transition-colors shrink-0" />
             }
+            {required && !completed && (
+              <span className="text-[0.55rem] tracking-[0.1em] uppercase text-[#919295] border border-[#e0ddd8] px-2 py-0.5">
+                Action needed
+              </span>
+            )}
+            {completed && (
+              <span className="text-[0.55rem] tracking-[0.1em] uppercase text-[#919295] border border-[#e0ddd8] px-2 py-0.5">
+                Complete
+              </span>
+            )}
           </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <h3 className="font-serif text-lg text-[#535353]">{title}</h3>
-              {required && !completed && (
-                <span className="text-[0.6rem] tracking-[0.1em] uppercase text-[#919295] border border-[#e0ddd8] px-2 py-0.5">Action needed</span>
-              )}
-              {completed && (
-                <span className="text-[0.6rem] tracking-[0.1em] uppercase text-[#919295] border border-[#e0ddd8] px-2 py-0.5">Complete</span>
-              )}
-            </div>
-            <p className="text-sm text-[#919295] mt-0.5">{description}</p>
-          </div>
+          <ChevronRight size={14} className="text-[#c2c5c8] group-hover:text-[#535353] transition-colors shrink-0" />
         </div>
-        <ChevronRight size={16} className="text-[#c2c5c8] group-hover:text-[#535353] transition-colors flex-shrink-0 ml-4" />
+        <h3 className="font-display text-xs tracking-[0.15em] uppercase text-[#535353] mb-2">{title}</h3>
+        <p className="text-xs text-[#919295] leading-relaxed">{description}</p>
       </div>
     </Link>
   )
