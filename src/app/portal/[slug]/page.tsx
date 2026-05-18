@@ -139,6 +139,11 @@ export default async function PortalDashboard({
           description="Photographer details, insurance documents, and what to expect on the day."
           href={`/portal/${slug}/venue-info`}
         />
+        <SectionCard
+          title="FAQ"
+          description="Important information about your day."
+          href={`/portal/${slug}/faq`}
+        />
       </div>
 
       {/* Photo triptych */}
