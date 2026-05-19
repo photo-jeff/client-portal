@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { Divider } from '@/components/ui/Divider'
 import { Button } from '@/components/ui/Button'
 import { ClientIdFields } from './ClientIdFields'
+import { DeleteClientButton } from './DeleteClientButton'
 
 export default async function ClientDetailPage(props: { params: Promise<{ id: string }> }) {
   const { id } = await props.params
@@ -133,10 +134,14 @@ export default async function ClientDetailPage(props: { params: Promise<{ id: st
         </section>
 
         {/* Actions */}
-        <section className="flex gap-4">
+        <section className="flex items-center justify-between">
           <Link href={`/portal/${client.portal_slug}`} target="_blank">
             <Button variant="outline">View portal →</Button>
           </Link>
+          <DeleteClientButton
+            clientId={client.id}
+            clientName={`${client.partner1_name} & ${client.partner2_name}`}
+          />
         </section>
 
       </main>
