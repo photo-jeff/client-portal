@@ -1,5 +1,6 @@
 import { createAdminClient } from '@/lib/supabase/admin'
 import { NextRequest, NextResponse } from 'next/server'
+import { submitVscoQuestionnaire } from '@/lib/vsco-questionnaire'
 
 function formatField(key: string, value: unknown): string {
   if (!value) return ''
@@ -8,7 +9,7 @@ function formatField(key: string, value: unknown): string {
 }
 
 async function sendEmail(partnerNames: string, slug: string, data: Record<string, unknown>) {
-  if (!process.env.RESEND_API_KEY) return // silently skip if not configured
+  if (!process.env.RESEND_API_KEY) return
 
   const rows = Object.entries(data)
     .map(([k, v]) => formatField(k, v))
@@ -62,19 +63,18 @@ export async function POST(request: NextRequest) {
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
-  // Send email to Jeff and fire Mac webhook when questionnaire is fully submitted
   if (completed_at) {
     const partnerNames = `${client.partner1_name} & ${client.partner2_name}`
-    await sendEmail(partnerNames, slug, data as Record<string, unknown>)
-
     const vscoUrl = (client as Record<string, unknown>).vsco_questionnaire_url as string | null
-    if (vscoUrl && process.env.MAC_WEBHOOK_URL) {
-      fetch(`${process.env.MAC_WEBHOOK_URL}/vsco-questionnaire`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ vsco_questionnaire_url: vscoUrl, data }),
-      }).catch(err => console.error('Mac webhook error:', err))
-    }
+
+    // Fire email and VSCO submission in parallel, neither blocks the response
+    await Promise.allSettled([
+      sendEmail(partnerNames, slug, data as Record<string, unknown>),
+      vscoUrl
+        ? submitVscoQuestionnaire(vscoUrl, data as Record<string, string>)
+            .catch(err => console.error('VSCO submission failed:', err))
+        : Promise.resolve(),
+    ])
   }
 
   return NextResponse.json({ ok: true })
