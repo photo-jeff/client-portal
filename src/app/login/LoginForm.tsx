@@ -6,6 +6,8 @@ import { Input } from '@/components/ui/Input'
 
 export function LoginForm() {
   const [email, setEmail] = useState('')
+  const [password, setPassword] = useState('')
+  const [mode, setMode] = useState<'magic' | 'password'>('magic')
   const [loading, setLoading] = useState(false)
   const [sent, setSent] = useState(false)
   const [error, setError] = useState('')
@@ -15,18 +17,34 @@ export function LoginForm() {
     setLoading(true)
     setError('')
     const supabase = createClient()
-    const { error } = await supabase.auth.signInWithOtp({
-      email,
-      options: {
-        emailRedirectTo: `${window.location.origin}/auth/callback`,
-      },
-    })
-    if (error) {
-      setError('Something went wrong. Please try again.')
+
+    if (mode === 'password') {
+      const { data, error } = await supabase.auth.signInWithPassword({ email, password })
+      if (error) {
+        setError('Incorrect email or password.')
+        setLoading(false)
+      } else {
+        // Session is now set in cookies — navigate to the right place
+        const userEmail = data.user?.email
+        if (userEmail === 'mrjeffoliver@gmail.com') {
+          window.location.href = '/admin'
+        } else {
+          // For client password logins, use the callback to look up their portal slug
+          window.location.href = '/auth/callback?from=password'
+        }
+      }
     } else {
-      setSent(true)
+      const { error } = await supabase.auth.signInWithOtp({
+        email,
+        options: { emailRedirectTo: `${window.location.origin}/auth/callback` },
+      })
+      if (error) {
+        setError('Something went wrong. Please try again.')
+      } else {
+        setSent(true)
+      }
+      setLoading(false)
     }
-    setLoading(false)
   }
 
   if (sent) {
@@ -37,7 +55,7 @@ export function LoginForm() {
         </div>
         <p className="font-serif text-xl">Check your email</p>
         <p className="text-sm text-[#919295]">
-          We've sent a sign-in link to <strong>{email}</strong>
+          We&apos;ve sent a sign-in link to <strong>{email}</strong>
         </p>
         <p className="text-xs text-[#b5b8ba] mt-4">The link expires in 1 hour.</p>
       </div>
@@ -55,10 +73,32 @@ export function LoginForm() {
         required
         autoComplete="email"
       />
+      {mode === 'password' && (
+        <Input
+          label="Password"
+          type="password"
+          value={password}
+          onChange={e => setPassword(e.target.value)}
+          placeholder="••••••••"
+          required
+          autoComplete="current-password"
+        />
+      )}
       {error && <p className="text-xs text-red-500">{error}</p>}
       <Button variant="filled" className="w-full" type="submit" disabled={loading}>
-        {loading ? 'Sending…' : 'Send sign-in link'}
+        {loading ? '…' : mode === 'password' ? 'Sign in' : 'Send sign-in link'}
       </Button>
+      <p className="text-center text-xs text-[#b5b8ba]">
+        {mode === 'magic' ? (
+          <button type="button" onClick={() => { setMode('password'); setError('') }} className="underline hover:text-[#535353] transition-colors">
+            Sign in with password instead
+          </button>
+        ) : (
+          <button type="button" onClick={() => { setMode('magic'); setError('') }} className="underline hover:text-[#535353] transition-colors">
+            Send a magic link instead
+          </button>
+        )}
+      </p>
     </form>
   )
 }
