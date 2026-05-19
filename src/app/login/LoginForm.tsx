@@ -16,34 +16,34 @@ export function LoginForm() {
     e.preventDefault()
     setLoading(true)
     setError('')
-    const supabase = createClient()
 
     if (mode === 'password') {
-      const { data, error } = await supabase.auth.signInWithPassword({ email, password })
-      if (error) {
+      // Server-side sign-in so cookies are set on the response and readable by SSR
+      const res = await fetch('/api/auth/signin', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+      })
+      if (!res.ok) {
         setError('Incorrect email or password.')
         setLoading(false)
       } else {
-        // Session is now set in cookies — navigate to the right place
-        const userEmail = data.user?.email
-        if (userEmail === 'mrjeffoliver@gmail.com') {
-          window.location.href = '/admin'
-        } else {
-          // For client password logins, use the callback to look up their portal slug
-          window.location.href = '/auth/callback?from=password'
-        }
+        const { redirectTo } = await res.json()
+        window.location.href = redirectTo
       }
     } else {
+      const supabase = createClient()
       const { error } = await supabase.auth.signInWithOtp({
         email,
         options: { emailRedirectTo: `${window.location.origin}/auth/callback` },
       })
       if (error) {
         setError('Something went wrong. Please try again.')
+        setLoading(false)
       } else {
         setSent(true)
+        setLoading(false)
       }
-      setLoading(false)
     }
   }
 
