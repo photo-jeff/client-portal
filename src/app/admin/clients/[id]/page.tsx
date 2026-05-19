@@ -46,53 +46,45 @@ export default async function ClientDetailPage(props: { params: Promise<{ id: st
 
       <main className="max-w-4xl mx-auto px-6 py-12 space-y-10">
 
-        {/* Client Details */}
+        {/* Client Details — all editable inline */}
         <section className="bg-white border border-[#e0ddd8] p-8 rounded-2xl">
-          <h2 className="font-serif text-xl mb-6">Client Details</h2>
+          <h2 className="font-serif text-xl mb-2">Client Details</h2>
+          <p className="text-xs text-[#aaa] mb-6">Click any field to edit, then press Enter or click away to save.</p>
           <Divider />
           <dl className="mt-6 grid grid-cols-2 gap-x-8 gap-y-4 text-sm">
-            <div>
-              <dt className="text-xs tracking-[0.1em] uppercase text-[#888] mb-1">Email</dt>
-              <dd>{client.email}</dd>
-            </div>
-            <div>
-              <dt className="text-xs tracking-[0.1em] uppercase text-[#888] mb-1">Portal slug</dt>
-              <dd>
-                <Link href={`/portal/${client.portal_slug}`} className="underline hover:no-underline" target="_blank">
-                  {client.portal_slug}
-                </Link>
-              </dd>
-            </div>
-            <div>
-              <dt className="text-xs tracking-[0.1em] uppercase text-[#888] mb-1">Wedding date</dt>
-              <dd>{client.wedding_date ? new Date(client.wedding_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }) : '—'}</dd>
-            </div>
-            <div>
-              <dt className="text-xs tracking-[0.1em] uppercase text-[#888] mb-1">Ceremony time</dt>
-              <dd>{client.ceremony_time || '—'}</dd>
-            </div>
-            <div>
-              <dt className="text-xs tracking-[0.1em] uppercase text-[#888] mb-1">Ceremony venue</dt>
-              <dd>{client.ceremony_venue || '—'}</dd>
-            </div>
-            <div>
-              <dt className="text-xs tracking-[0.1em] uppercase text-[#888] mb-1">Reception venue</dt>
-              <dd>{client.reception_venue || client.ceremony_venue || '—'}</dd>
-            </div>
-            <div>
-              <dt className="text-xs tracking-[0.1em] uppercase text-[#888] mb-1">Package</dt>
-              <dd>{client.package_name || '—'}</dd>
-            </div>
-            <div>
-              <dt className="text-xs tracking-[0.1em] uppercase text-[#888] mb-1">Invite sent</dt>
-              <dd>{client.invite_sent_at ? new Date(client.invite_sent_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'Not yet'}</dd>
-            </div>
             <ClientIdFields
               clientId={client.id}
-              vscoJobId={client.vsco_job_id ?? null}
-              zohoContactId={(client as Record<string, unknown>).zoho_contact_id as string | null}
+              initialValues={{
+                partner1_name: client.partner1_name ?? null,
+                partner2_name: client.partner2_name ?? null,
+                email: client.email ?? null,
+                wedding_date: client.wedding_date ?? null,
+                ceremony_time: client.ceremony_time ?? null,
+                ceremony_venue: client.ceremony_venue ?? null,
+                reception_venue: client.reception_venue ?? null,
+                package_name: client.package_name ?? null,
+                vsco_job_id: client.vsco_job_id ?? null,
+                zoho_contact_id: (client as Record<string, unknown>).zoho_contact_id as string | null,
+                vsco_questionnaire_url: (client as Record<string, unknown>).vsco_questionnaire_url as string | null,
+              }}
             />
           </dl>
+          <div className="mt-6 pt-4 border-t border-[#f0ede8] text-sm">
+            <span className="text-xs tracking-[0.1em] uppercase text-[#888]">Portal slug</span>
+            <div className="mt-1">
+              <Link href={`/portal/${client.portal_slug}`} className="underline hover:no-underline text-sm" target="_blank">
+                {client.portal_slug}
+              </Link>
+            </div>
+          </div>
+          {client.invite_sent_at && (
+            <div className="mt-4 text-sm">
+              <span className="text-xs tracking-[0.1em] uppercase text-[#888]">Invite sent</span>
+              <div className="mt-1">
+                {new Date(client.invite_sent_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+              </div>
+            </div>
+          )}
         </section>
 
         {/* Questionnaire */}

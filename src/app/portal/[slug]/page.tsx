@@ -51,6 +51,7 @@ export default async function PortalDashboard({
      client.package_name.toLowerCase().includes('frame'))
 
   // Timeline phase
+  const isUrgent = daysUntil !== null && daysUntil > 0 && daysUntil <= 30
   const isClose = daysUntil !== null && daysUntil <= 60
   const isApproaching = daysUntil !== null && daysUntil <= 180
 
@@ -117,6 +118,7 @@ export default async function PortalDashboard({
           href={`/portal/${slug}/questionnaire`}
           completed={questionnaireComplete}
           required={isClose && !questionnaireComplete}
+          urgent={isUrgent && !questionnaireComplete}
         />
         <SectionCard
           title="Shot List"
@@ -128,6 +130,7 @@ export default async function PortalDashboard({
           href={`/portal/${slug}/shot-list`}
           completed={shotListComplete}
           required={isClose && !shotListComplete}
+          urgent={isUrgent && !shotListComplete}
         />
         <SectionCard
           title="Invoices"

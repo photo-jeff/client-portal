@@ -25,6 +25,7 @@ export function NewClientForm() {
     package_name: '',
     vsco_job_id: '',
     zoho_contact_id: '',
+    vsco_questionnaire_url: '',
   })
 
   function update(key: string, value: string) {
@@ -108,6 +109,7 @@ export function NewClientForm() {
         <Input label="VSCO Job ID" value={form.vsco_job_id} onChange={e => update('vsco_job_id', e.target.value)} hint="Optional" />
         <Input label="Zoho Contact ID" value={form.zoho_contact_id} onChange={e => update('zoho_contact_id', e.target.value)} hint="Optional" />
       </div>
+      <Input label="VSCO Questionnaire URL" value={form.vsco_questionnaire_url} onChange={e => update('vsco_questionnaire_url', e.target.value)} hint="Paste after creating in VSCO" />
       {error && <p className="text-sm text-red-500">{error}</p>}
       <Button variant="filled" className="w-full" type="submit" disabled={saving}>
         {saving ? 'Creating…' : 'Create portal'}
