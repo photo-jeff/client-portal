@@ -19,17 +19,22 @@ export function LoginForm() {
 
     if (mode === 'password') {
       // Server-side sign-in so cookies are set on the response and readable by SSR
-      const res = await fetch('/api/auth/signin', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }),
-      })
-      if (!res.ok) {
-        setError('Incorrect email or password.')
+      try {
+        const res = await fetch('/api/auth/signin', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, password }),
+        })
+        if (!res.ok) {
+          setError('Incorrect email or password.')
+          setLoading(false)
+        } else {
+          const { redirectTo } = await res.json()
+          window.location.href = redirectTo
+        }
+      } catch {
+        setError('Something went wrong. Please try again.')
         setLoading(false)
-      } else {
-        const { redirectTo } = await res.json()
-        window.location.href = redirectTo
       }
     } else {
       const supabase = createClient()

@@ -69,6 +69,14 @@ export default async function VenueInfoPage({
               <dd>Jeff &amp; Sarah Oliver</dd>
             </div>
             <div className="py-3 flex gap-8">
+              <dt className="text-xs tracking-[0.1em] uppercase text-[#919295] w-40 shrink-0 pt-0.5">Email</dt>
+              <dd><a href="mailto:jeff@jeffoliverphotography.com" className="hover:underline">jeff@jeffoliverphotography.com</a></dd>
+            </div>
+            <div className="py-3 flex gap-8">
+              <dt className="text-xs tracking-[0.1em] uppercase text-[#919295] w-40 shrink-0 pt-0.5">Mobile</dt>
+              <dd><a href="tel:+447432202861" className="hover:underline">07432 202861</a></dd>
+            </div>
+            <div className="py-3 flex gap-8">
               <dt className="text-xs tracking-[0.1em] uppercase text-[#919295] w-40 shrink-0 pt-0.5">Vehicle registration</dt>
               <dd className="font-mono tracking-wider">LV73WJO</dd>
             </div>
