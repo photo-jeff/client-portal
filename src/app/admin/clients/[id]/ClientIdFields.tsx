@@ -3,16 +3,26 @@ import { useState } from 'react'
 
 interface Props {
   clientId: string
-  vscoJobId: string | null
-  zohoContactId: string | null
+  initialValues: Record<string, string | null>
 }
 
-function Field({ label, field, initial, clientId }: { label: string; field: string; initial: string | null; clientId: string }) {
+type FieldType = 'text' | 'email' | 'date' | 'time' | 'url'
+
+function Field({
+  label, field, initial, clientId, type = 'text',
+}: {
+  label: string
+  field: string
+  initial: string | null
+  clientId: string
+  type?: FieldType
+}) {
   const [value, setValue] = useState(initial ?? '')
   const [saved, setSaved] = useState(false)
   const [saving, setSaving] = useState(false)
 
   async function save() {
+    if (value === (initial ?? '')) return
     setSaving(true)
     await fetch(`/api/admin/client/${clientId}`, {
       method: 'PATCH',
@@ -29,6 +39,7 @@ function Field({ label, field, initial, clientId }: { label: string; field: stri
       <dt className="text-xs tracking-[0.1em] uppercase text-[#888] mb-1">{label}</dt>
       <dd className="flex items-center gap-2">
         <input
+          type={type}
           value={value}
           onChange={e => { setValue(e.target.value); setSaved(false) }}
           onBlur={save}
@@ -43,11 +54,21 @@ function Field({ label, field, initial, clientId }: { label: string; field: stri
   )
 }
 
-export function ClientIdFields({ clientId, vscoJobId, zohoContactId }: Props) {
+export function ClientIdFields({ clientId, initialValues }: Props) {
+  const v = (k: string) => initialValues[k] ?? null
   return (
     <>
-      <Field label="VSCO Job ID" field="vsco_job_id" initial={vscoJobId} clientId={clientId} />
-      <Field label="Zoho Contact ID" field="zoho_contact_id" initial={zohoContactId} clientId={clientId} />
+      <Field label="Partner 1 name"        field="partner1_name"          initial={v('partner1_name')}          clientId={clientId} />
+      <Field label="Partner 2 name"        field="partner2_name"          initial={v('partner2_name')}          clientId={clientId} />
+      <Field label="Email"                 field="email"                  initial={v('email')}                  clientId={clientId} type="email" />
+      <Field label="Wedding date"          field="wedding_date"           initial={v('wedding_date')}           clientId={clientId} type="date" />
+      <Field label="Ceremony time"         field="ceremony_time"          initial={v('ceremony_time')}          clientId={clientId} type="time" />
+      <Field label="Ceremony venue"        field="ceremony_venue"         initial={v('ceremony_venue')}         clientId={clientId} />
+      <Field label="Reception venue"       field="reception_venue"        initial={v('reception_venue')}        clientId={clientId} />
+      <Field label="Package"               field="package_name"           initial={v('package_name')}           clientId={clientId} />
+      <Field label="VSCO Job ID"           field="vsco_job_id"            initial={v('vsco_job_id')}            clientId={clientId} />
+      <Field label="Zoho Contact ID"       field="zoho_contact_id"        initial={v('zoho_contact_id')}        clientId={clientId} />
+      <Field label="VSCO Questionnaire URL" field="vsco_questionnaire_url" initial={v('vsco_questionnaire_url')} clientId={clientId} type="url" />
     </>
   )
 }

@@ -50,7 +50,7 @@ export async function POST(request: NextRequest) {
 
   const { data: client } = await admin
     .from('clients')
-    .select('id, partner1_name, partner2_name')
+    .select('id, partner1_name, partner2_name, vsco_questionnaire_url')
     .eq('portal_slug', slug)
     .single()
 
@@ -62,10 +62,19 @@ export async function POST(request: NextRequest) {
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
-  // Send email to Jeff when questionnaire is fully submitted
+  // Send email to Jeff and fire Mac webhook when questionnaire is fully submitted
   if (completed_at) {
     const partnerNames = `${client.partner1_name} & ${client.partner2_name}`
     await sendEmail(partnerNames, slug, data as Record<string, unknown>)
+
+    const vscoUrl = (client as Record<string, unknown>).vsco_questionnaire_url as string | null
+    if (vscoUrl && process.env.MAC_WEBHOOK_URL) {
+      fetch(`${process.env.MAC_WEBHOOK_URL}/vsco-questionnaire`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ vsco_questionnaire_url: vscoUrl, data }),
+      }).catch(err => console.error('Mac webhook error:', err))
+    }
   }
 
   return NextResponse.json({ ok: true })
