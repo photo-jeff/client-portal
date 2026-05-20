@@ -21,6 +21,7 @@ export async function POST(request: NextRequest) {
     wedding_date?: string | null    // YYYY-MM-DD
     ceremony_time?: string | null   // HH:MM
     ceremony_venue?: string | null
+    package_name?: string | null
     vsco_job_id?: string | null
   }
 
@@ -61,6 +62,7 @@ export async function POST(request: NextRequest) {
     wedding_date: body.wedding_date ?? null,
     ceremony_venue: body.ceremony_venue ?? null,
     ceremony_time: body.ceremony_time ?? null,
+    package_name: body.package_name ?? null,
     portal_slug: slug,
     vsco_job_id: vscoJobId,
   })

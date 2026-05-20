@@ -551,11 +551,12 @@ const server = http.createServer(async (req, res) => {
 
       // Create client portal (fire-and-forget — doesn't block response)
       if (PORTAL_SECRET) {
-        const groomFirst = body.groom_first_name || body['groom.first_name'] || '';
-        const groomLast  = body.groom_last_name  || body['groom.last_name']  || '';
-        const rawDate    = body.wedding_date     || body['wedding_day.start_date'] || '';
-        const rawTime    = body.ceremony_time    || body['ceremony.start_time']    || '';
-        const venue      = body.wedding_venue    || body['job.custom.wedding_venue'] || '';
+        const groomFirst  = body.groom_first_name || body['groom.first_name'] || '';
+        const groomLast   = body.groom_last_name  || body['groom.last_name']  || '';
+        const rawDate     = body.wedding_date     || body['wedding_day.start_date'] || '';
+        const rawTime     = body.ceremony_time    || body['ceremony.start_time']    || '';
+        const venue       = body.wedding_venue    || body['job.custom.wedding_venue'] || '';
+        const packageName = body.package_name     || body.collection || '';
 
         fetch(`${PORTAL_BASE}/api/webhooks/vsco-job?secret=${PORTAL_SECRET}`, {
           method:  'POST',
@@ -567,6 +568,7 @@ const server = http.createServer(async (req, res) => {
             wedding_date:   normaliseDate(rawDate),
             ceremony_venue: venue || null,
             ceremony_time:  normaliseTime(rawTime),
+            package_name:   packageName || null,
             vsco_job_id:    payload.jobId,
           }),
         }).then(r => r.json()).then(d => console.log('Portal result:', JSON.stringify(d)))
