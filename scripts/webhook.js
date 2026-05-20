@@ -551,11 +551,11 @@ const server = http.createServer(async (req, res) => {
 
       // Create client portal (fire-and-forget — doesn't block response)
       if (PORTAL_SECRET) {
-        const groomFirst = body['groom.first_name'] || body.groom_first_name || '';
-        const groomLast  = body['groom.last_name']  || body.groom_last_name  || '';
-        const rawDate    = body['wedding_day.start_date'] || body.wedding_day_start_date || '';
-        const rawTime    = body['ceremony.start_time']    || body.ceremony_start_time    || '';
-        const venue      = body['job.custom.wedding_venue'] || body.job_custom_wedding_venue || '';
+        const groomFirst = body.groom_first_name || body['groom.first_name'] || '';
+        const groomLast  = body.groom_last_name  || body['groom.last_name']  || '';
+        const rawDate    = body.wedding_date     || body['wedding_day.start_date'] || '';
+        const rawTime    = body.ceremony_time    || body['ceremony.start_time']    || '';
+        const venue      = body.wedding_venue    || body['job.custom.wedding_venue'] || '';
 
         fetch(`${PORTAL_BASE}/api/webhooks/vsco-job?secret=${PORTAL_SECRET}`, {
           method:  'POST',
