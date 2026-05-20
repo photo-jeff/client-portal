@@ -23,6 +23,7 @@ export async function POST(request: NextRequest) {
     ceremony_venue?: string | null
     package_name?: string | null
     vsco_job_id?: string | null
+    zoho_contact_id?: string | null
   }
 
   const partner1 = body.partner1_name?.trim() ?? ''
@@ -65,6 +66,7 @@ export async function POST(request: NextRequest) {
     package_name: body.package_name ?? null,
     portal_slug: slug,
     vsco_job_id: vscoJobId,
+    zoho_contact_id: body.zoho_contact_id ?? null,
   })
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
