@@ -362,6 +362,36 @@ function normaliseTime(raw) {
 }
 
 // ------------------------------------------------------------
+// VSCO ULID LOOKUP
+// Fetches all jobs from VSCO API and finds the ULID matching a numeric job ID.
+// The VSCO API ignores all filter params — must filter client-side.
+// ------------------------------------------------------------
+async function lookupVscoUlid(numericJobId) {
+  if (!numericJobId) return null;
+  try {
+    const res = await fetch(`${VSCO_API_PW}/jobs`, {
+      headers: { 'X-API-KEY': VSCO_API_KEY_PW, 'Accept': 'application/json' },
+    });
+    if (!res.ok) throw new Error(`VSCO API ${res.status}`);
+    const data = await res.json();
+    const jobs = data.items || [];
+    const match = jobs.find(job => {
+      const href = job.links?.self?.managerHref || '';
+      return href.split('/').pop() === String(numericJobId);
+    });
+    if (!match) {
+      console.log(`VSCO ULID lookup: no job found for numeric ID ${numericJobId}`);
+      return null;
+    }
+    console.log(`VSCO ULID lookup: ${numericJobId} → ${match.id}`);
+    return match.id || null;
+  } catch (e) {
+    console.error(`VSCO ULID lookup failed: ${e.message}`);
+    return null;
+  }
+}
+
+// ------------------------------------------------------------
 // ZOHO TOKEN MANAGER
 // ------------------------------------------------------------
 async function getAccessToken() {
@@ -427,11 +457,16 @@ async function findZohoContact(email) {
 // CREATE OR UPDATE ZOHO CONTACT
 // ------------------------------------------------------------
 async function syncZohoContact(payload) {
-  const { firstName, lastName, email, phone, address: rawAddress, jobId } = payload;
+  const { firstName, lastName, email, phone, address: rawAddress, jobId, vscoUlid } = payload;
 
   const contactName  = `${firstName} ${lastName}`.trim();
   const addr         = parseAddress(rawAddress);
   const cleanedPhone = cleanPhone(phone);
+
+  const customFields = [
+    { label: 'VSCO Job ID', value: jobId || '' },
+  ];
+  if (vscoUlid) customFields.push({ label: 'VSCO ULID', value: vscoUlid });
 
   const contactBody = {
     contact_name:      contactName,
@@ -445,9 +480,7 @@ async function syncZohoContact(payload) {
       zip:     addr.zip,
       country: addr.country,
     },
-    custom_fields: [
-      { label: 'VSCO Job ID', value: jobId || '' },
-    ],
+    custom_fields: customFields,
     contact_persons: [{
       first_name:         firstName,
       last_name:          lastName,
@@ -545,8 +578,14 @@ const server = http.createServer(async (req, res) => {
         return;
       }
 
+      // Look up VSCO ULID from numeric job ID (best-effort, non-blocking on failure)
+      let vscoUlid = null;
+      if (payload.jobId) {
+        vscoUlid = await lookupVscoUlid(payload.jobId);
+      }
+
       // Sync to Zoho
-      const result = await syncZohoContact(payload);
+      const result = await syncZohoContact({ ...payload, vscoUlid });
       console.log('Zoho sync result:', result);
 
       // Create client portal (fire-and-forget — doesn't block response)
