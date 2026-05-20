@@ -378,7 +378,7 @@ async function lookupVscoIds(jobId) {
     });
     if (!res.ok) throw new Error(`VSCO API ${res.status}`);
     const data = await res.json();
-    const jobs = data.items || [];
+    const jobs = data.items || data.jobs || (Array.isArray(data) ? data : []);
 
     let match;
     if (isUlid) {
