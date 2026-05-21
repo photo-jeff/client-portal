@@ -22,9 +22,14 @@ export default async function AdminPage() {
       <header className="bg-white border-b border-[#e0ddd8]">
         <div className="max-w-5xl mx-auto px-6 py-5 flex items-center justify-between">
           <h1 className="font-serif text-xl">Jeff Oliver Photography — Admin</h1>
-          <Link href="/admin/clients/new">
-            <Button variant="outline" size="sm">New portal</Button>
-          </Link>
+          <div className="flex items-center gap-3">
+            <Link href="/admin/faq">
+              <Button variant="outline" size="sm">Edit FAQ</Button>
+            </Link>
+            <Link href="/admin/clients/new">
+              <Button variant="outline" size="sm">New portal</Button>
+            </Link>
+          </div>
         </div>
       </header>
 
