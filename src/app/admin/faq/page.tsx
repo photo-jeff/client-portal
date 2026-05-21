@@ -34,6 +34,9 @@ export default async function AdminFaqPage() {
           <p className="text-sm text-[#919295] mt-4">
             Click into any block to edit. Changes save automatically when you click away.
           </p>
+          <p className="text-xs text-[#bbb] mt-2">
+            Use <code className="bg-[#f0ede8] px-1 py-0.5 rounded text-[#888]">{'{{delivery_date}}'}</code> to insert each client&apos;s gallery delivery date (8 weeks after their wedding).
+          </p>
         </div>
 
         <FaqEditor blocks={blocks ?? []} />

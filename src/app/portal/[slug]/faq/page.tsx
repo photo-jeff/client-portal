@@ -14,13 +14,21 @@ export default async function FaqPage({
   const admin = createAdminClient()
 
   const [{ data: client }, { data: blocks }] = await Promise.all([
-    admin.from('clients').select('id').eq('portal_slug', slug).single(),
+    admin.from('clients').select('id, wedding_date').eq('portal_slug', slug).single(),
     admin.from('faq_blocks').select('title, content').order('sort_order'),
   ])
 
   if (!client) notFound()
 
-  const items = (blocks ?? []).map(b => ({ title: b.title, content: b.content }))
+  const deliveryDate = client.wedding_date
+    ? new Date(new Date(client.wedding_date).getTime() + 8 * 7 * 24 * 60 * 60 * 1000)
+        .toLocaleDateString('en-GB', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
+    : 'within 8 weeks of your wedding day'
+
+  const items = (blocks ?? []).map(b => ({
+    title: b.title,
+    content: b.content.replace(/\{\{delivery_date\}\}/g, deliveryDate),
+  }))
 
   return (
     <div className="max-w-2xl mx-auto">
