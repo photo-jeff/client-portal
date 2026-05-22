@@ -72,7 +72,7 @@ export async function POST(request: NextRequest) {
       sendEmail(partnerNames, slug, data as Record<string, unknown>),
       vscoUrl
         ? submitVscoQuestionnaire(vscoUrl, data as Record<string, string>)
-            .catch(err => console.error('VSCO submission failed:', err))
+            .catch(err => console.error('VSCO submission failed:', err instanceof Error ? err.message : String(err)))
         : Promise.resolve(),
     ])
   }
