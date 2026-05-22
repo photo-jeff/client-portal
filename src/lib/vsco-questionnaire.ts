@@ -1,9 +1,6 @@
 // Maps our questionnaire field names to VSCO form field IDs
 const TEXT_FIELDS: Record<string, string> = {
-  ceremony_time:           'QF6135522',
-  departure_time:          'QF6135330',
-  wedding_breakfast_time:  'QF6135336',
-  speeches_timing:         'QF6135525',
+  // speeches_timing and time fields handled separately (need value mapping / format conversion)
   emergency_contact:       'QF7826772',
   names_for_slideshow:     'QF6135369',
   aisle_escort:            'QF7776981',
@@ -24,11 +21,22 @@ const TEXT_FIELDS: Record<string, string> = {
   cake:                    'QF6135420',
   videographer:            'QF6135411',
   stationery:              'QF6135432',
-  transport:               'QF6135417',
-  dj_band:                 'QF6135414',
-  photo_booth:             'QF6135423',
-  jeweller:                'QF6135426',
-  additional_vendors:      'QF6135429',
+  // QF6135417 = Catering Company (not in our questionnaire, left as pre-filled)
+  transport:               'QF6135414',  // Cars/Transportation
+  dj_band:                 'QF6135423',  // DJ or Band
+  photo_booth:             'QF6135426',  // Photo Booth
+  jeweller:                'QF6135429',  // Jeweller
+  additional_vendors:      'QF6135435',  // Are there any additional vendors to include?
+}
+
+// Time fields — VSCO expects 12-hour format e.g. "2:00pm"
+// QF6135330 = Ceremony Start Time (REQUIRED)
+// QF6135522 = Departure time (time leaving getting-ready location)
+// QF6135336 = Wedding Breakfast Start Time (REQUIRED)
+const TIME_FIELDS: Record<string, string> = {
+  ceremony_time:          'QF6135330',
+  departure_time:         'QF6135522',
+  wedding_breakfast_time: 'QF6135336',
 }
 
 // Location fields — only the _Name sub-field is overridden; all other sub-fields
@@ -44,8 +52,29 @@ const ADDRESS_NAME_FIELDS: Record<string, string> = {
 function mapFirstLook(val: string | undefined): string {
   if (!val) return ''
   return val.toLowerCase() === 'yes'
-    ? "Yes, we'd like a private first look"
+    ? "Yes, we want to capture a first look"
     : "No, we'd like to wait until the ceremony"
+}
+
+function mapSpeeches(val: string | undefined): string {
+  if (!val) return ''
+  const lower = val.toLowerCase()
+  if (lower.includes('after')) return 'After the meal'
+  if (lower.includes('before')) return 'Before the meal'
+  return val
+}
+
+function toVscoTime(val: string | undefined): string {
+  if (!val) return ''
+  if (/[ap]m$/i.test(val)) return val
+  const match = val.match(/^(\d{1,2}):(\d{2})$/)
+  if (!match) return val
+  let hour = parseInt(match[1])
+  const min = match[2]
+  const suffix = hour >= 12 ? 'pm' : 'am'
+  if (hour > 12) hour -= 12
+  if (hour === 0) hour = 12
+  return `${hour}:${min}${suffix}`
 }
 
 function decodeHtmlEntities(s: string): string {
@@ -88,6 +117,14 @@ function buildParams(html: string, data: Record<string, string>): URLSearchParam
 
   // First look dropdown
   params.set('QF6135324', mapFirstLook(data.first_look))
+
+  // Speeches timing dropdown
+  params.set('QF6135525', mapSpeeches(data.speeches_timing))
+
+  // Time fields (12-hour format)
+  for (const [ourField, vscoId] of Object.entries(TIME_FIELDS)) {
+    params.set(vscoId, toVscoTime(data[ourField]))
+  }
 
   // Plain text fields
   for (const [ourField, vscoId] of Object.entries(TEXT_FIELDS)) {
