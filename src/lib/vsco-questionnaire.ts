@@ -190,6 +190,10 @@ export async function submitVscoQuestionnaire(
     currentUrl = postRes.url
 
     if (html.includes('formErrorMessage') || html.includes('Please complete all required fields')) {
+      // Log a snippet to identify which fields are failing
+      const errIdx = html.indexOf('formErrorMessage')
+      const snippet = html.slice(Math.max(0, errIdx - 100), errIdx + 400).replace(/\s+/g, ' ')
+      console.error(`[VSCO questionnaire] Validation failed on page ${page}. Snippet: ${snippet}`)
       throw new Error(`VSCO form validation failed on page ${page}`)
     }
 
