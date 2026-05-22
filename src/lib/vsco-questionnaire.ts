@@ -52,33 +52,21 @@ function decodeHtmlEntities(s: string): string {
   return s.replace(/&quot;/g, '"').replace(/&amp;/g, '&').replace(/&#39;/g, "'").replace(/&lt;/g, '<').replace(/&gt;/g, '>')
 }
 
-export async function submitVscoQuestionnaire(
-  vscoUrl: string,
-  data: Record<string, string>
-): Promise<void> {
-  const getRes = await fetch(vscoUrl, {
-    headers: { 'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36' },
-  })
-  if (!getRes.ok) throw new Error(`VSCO form GET failed with status ${getRes.status}`)
-  const html = await getRes.text()
-
-  // CSRF — has extra attributes between name= and value=, so match the whole tag
+function extractCsrf(html: string): string | null {
   const csrfTag = html.match(/<input[^>]+name="csrf"[^>]*>/)
-  const csrf = csrfTag?.[0].match(/value="([^"]+)"/)?.[1]
-  if (!csrf) throw new Error('Could not find CSRF token in VSCO form')
+  return csrfTag?.[0].match(/value="([^"]+)"/)?.[1] ?? null
+}
 
-  // FormState and FormBetas — single-quoted in the HTML
-  const formState = html.match(/name="FormState"\s+value='([^']*)'/)?.[1]?.replace(/&quot;/g, '"') ?? '{}'
-  const formBetas = html.match(/name="FormBetas"\s+value='([^']*)'/)?.[1]?.replace(/&quot;/g, '"') ?? '{}'
+function buildParams(html: string, data: Record<string, string>): URLSearchParams {
+  const params = new URLSearchParams()
+  const SYSTEM_FIELDS = new Set(['csrf', 'FormState', 'FormBetas', 'FormAction', 'Continue', 'Save', 'Delete', 'Cancel'])
+  const inputRegex = /<input([^>]*)>/g
+  let m
 
   // Start with ALL pre-filled input values from the form.
   // This carries through venue ContactIDs, PlaceIDs, lat/long, address components
   // etc. that VSCO pre-populates from its own database — without these the
   // required address field validation fails.
-  const params = new URLSearchParams()
-  const inputRegex = /<input([^>]*)>/g
-  let m
-  const SYSTEM_FIELDS = new Set(['csrf', 'FormState', 'FormBetas', 'FormAction', 'Continue', 'Save', 'Delete', 'Cancel'])
   while ((m = inputRegex.exec(html)) !== null) {
     const attrs = m[1]
     const nameMatch = attrs.match(/name="([^"]+)"/)
@@ -112,33 +100,64 @@ export async function submitVscoQuestionnaire(
     params.append('QF7828059[]', 'Yes')
   }
 
-  // System fields
-  params.set('csrf', csrf)
-  params.set('FormAction', 'Continue')
-  params.set('FormState', formState)
-  params.set('FormBetas', formBetas)
-  params.set('Continue', 'Continue')
+  return params
+}
 
-  const postRes = await fetch(vscoUrl, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/x-www-form-urlencoded',
-      'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36',
-      'Origin': new URL(vscoUrl).origin,
-      'Referer': vscoUrl,
-    },
-    body: params.toString(),
-    redirect: 'follow',
-  })
+export async function submitVscoQuestionnaire(
+  vscoUrl: string,
+  data: Record<string, string>
+): Promise<void> {
+  const origin = new URL(vscoUrl).origin
+  const userAgent = 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36'
 
-  if (!postRes.ok) {
-    throw new Error(`VSCO form POST failed with status ${postRes.status}`)
+  const getRes = await fetch(vscoUrl, { headers: { 'User-Agent': userAgent } })
+  if (!getRes.ok) throw new Error(`VSCO form GET failed with status ${getRes.status}`)
+  let html = await getRes.text()
+  let currentUrl = vscoUrl
+
+  // VSCO questionnaires are multi-page. Loop until no more CSRF token (final confirmation page).
+  for (let page = 1; page <= 10; page++) {
+    const csrf = extractCsrf(html)
+    if (!csrf) {
+      console.log(`[VSCO questionnaire] All pages submitted — completed after page ${page - 1}`)
+      return
+    }
+
+    const formState = html.match(/name="FormState"\s+value='([^']*)'/)?.[1]?.replace(/&quot;/g, '"') ?? '{}'
+    const formBetas = html.match(/name="FormBetas"\s+value='([^']*)'/)?.[1]?.replace(/&quot;/g, '"') ?? '{}'
+
+    const params = buildParams(html, data)
+    params.set('csrf', csrf)
+    params.set('FormAction', 'Continue')
+    params.set('FormState', formState)
+    params.set('FormBetas', formBetas)
+    params.set('Continue', 'Continue')
+
+    const postRes = await fetch(currentUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+        'User-Agent': userAgent,
+        'Origin': origin,
+        'Referer': currentUrl,
+      },
+      body: params.toString(),
+      redirect: 'follow',
+    })
+
+    if (!postRes.ok) {
+      throw new Error(`VSCO form POST failed on page ${page} with status ${postRes.status}`)
+    }
+
+    html = await postRes.text()
+    currentUrl = postRes.url
+
+    if (html.includes('formErrorMessage') || html.includes('Please complete all required fields')) {
+      throw new Error(`VSCO form validation failed on page ${page}`)
+    }
+
+    console.log(`[VSCO questionnaire] Page ${page} submitted — URL: ${currentUrl}`)
   }
 
-  const responseText = await postRes.text()
-  if (responseText.includes('formErrorMessage') || responseText.includes('Please complete all required fields')) {
-    throw new Error('VSCO form validation failed — required fields not satisfied')
-  }
-
-  console.log(`[VSCO questionnaire] Submitted successfully — final URL: ${postRes.url}`)
+  throw new Error('VSCO form exceeded maximum page limit — may be stuck in a loop')
 }
