@@ -215,7 +215,7 @@ export async function submitVscoQuestionnaire(
     html = await postRes.text()
     currentUrl = postRes.url
 
-    if (html.includes('formErrorMessage') || html.includes('Please complete all required fields')) {
+    if (html.includes('Please complete all required fields')) {
       throw new Error(`VSCO form validation failed on page ${page}`)
     }
 
