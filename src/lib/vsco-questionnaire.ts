@@ -109,10 +109,36 @@ function buildParams(html: string, data: Record<string, string>): URLSearchParam
     params.append(name, value)
   }
 
+  // Also extract currently-selected values from <select> elements (e.g. Country dropdowns).
+  // These are not <input> tags so the loop above misses them.
+  const selectRegex = /<select[^>]+name="([^"]+)"[^>]*>([\s\S]*?)<\/select>/g
+  while ((m = selectRegex.exec(html)) !== null) {
+    const name = m[1]
+    if (SYSTEM_FIELDS.has(name)) continue
+    const optContent = m[2]
+    const selOptMatch = optContent.match(/<option([^>]*selected[^>]*)>/)
+    if (selOptMatch) {
+      const valMatch = selOptMatch[1].match(/value="([^"]*)"/)
+      if (valMatch) params.append(name, decodeHtmlEntities(valMatch[1]))
+    }
+  }
+
   // Override address _Name fields with our questionnaire answers
   for (const [ourField, vscoId] of Object.entries(ADDRESS_NAME_FIELDS)) {
     const text = data[ourField]
     if (text) params.set(`${vscoId}_Name`, text)
+  }
+
+  // VSCO only pre-fills venue sub-fields (City, Postal, PlaceID etc.) for the ceremony
+  // location from its own database. The reception location often has the same venue
+  // but VSCO leaves its sub-fields blank. Copy ceremony sub-fields to reception when
+  // the reception ones are missing — required City/Postal otherwise fail validation.
+  const venueSubs = ['_City', '_Postal', '_Lat', '_Long', '_PlaceID', '_State', '_Village', '_ContactID', '_TimezoneID', '_Country']
+  for (const sub of venueSubs) {
+    const ceremony = params.get(`QF6135327${sub}`) ?? ''
+    if (ceremony && !params.get(`QF6135333${sub}`)) {
+      params.set(`QF6135333${sub}`, ceremony)
+    }
   }
 
   // First look dropdown
@@ -190,10 +216,6 @@ export async function submitVscoQuestionnaire(
     currentUrl = postRes.url
 
     if (html.includes('formErrorMessage') || html.includes('Please complete all required fields')) {
-      // Log a snippet to identify which fields are failing
-      const errIdx = html.indexOf('formErrorMessage')
-      const snippet = html.slice(Math.max(0, errIdx - 100), errIdx + 400).replace(/\s+/g, ' ')
-      console.error(`[VSCO questionnaire] Validation failed on page ${page}. Snippet: ${snippet}`)
       throw new Error(`VSCO form validation failed on page ${page}`)
     }
 
