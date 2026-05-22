@@ -54,13 +54,23 @@ export async function submitVscoQuestionnaire(
   const getRes = await fetch(vscoUrl, {
     headers: { 'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36' },
   })
+  if (!getRes.ok) throw new Error(`VSCO form GET failed with status ${getRes.status}`)
   const html = await getRes.text()
 
-  const csrf = html.match(/name="csrf"\s+value="([^"]+)"/)?.[1]
+  // Forward cookies from GET into POST (VSCO may tie CSRF token to a session cookie)
+  const setCookie = getRes.headers.get('set-cookie')
+  const cookieHeader = setCookie
+    ? setCookie.split(',').map(c => c.split(';')[0].trim()).join('; ')
+    : ''
+
+  // CSRF input has extra attributes between name= and value=, so match the whole tag first
+  const csrfTag = html.match(/<input[^>]+name="csrf"[^>]*>/)
+  const csrf = csrfTag?.[0].match(/value="([^"]+)"/)?.[1]
   if (!csrf) throw new Error('Could not find CSRF token in VSCO form')
 
-  const formState = html.match(/name="FormState"\s+value="([^"]*)"/)?.[1]?.replace(/&quot;/g, '"') ?? '{}'
-  const formBetas = html.match(/name="FormBetas"\s+value="([^"]*)"/)?.[1]?.replace(/&quot;/g, '"') ?? '{}'
+  // FormState and FormBetas are single-quoted in the HTML
+  const formState = html.match(/name="FormState"\s+value='([^']*)'/)?.[1]?.replace(/&quot;/g, '"') ?? '{}'
+  const formBetas = html.match(/name="FormBetas"\s+value='([^']*)'/)?.[1]?.replace(/&quot;/g, '"') ?? '{}'
 
   const params = new URLSearchParams()
 
@@ -109,12 +119,14 @@ export async function submitVscoQuestionnaire(
       'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36',
       'Origin': new URL(vscoUrl).origin,
       'Referer': vscoUrl,
+      ...(cookieHeader ? { 'Cookie': cookieHeader } : {}),
     },
     body: params.toString(),
     redirect: 'follow',
   })
 
-  if (!postRes.ok && postRes.status !== 302) {
+  if (!postRes.ok) {
     throw new Error(`VSCO form POST failed with status ${postRes.status}`)
   }
+  console.log(`[VSCO questionnaire] Submitted successfully — final URL: ${postRes.url}`)
 }
