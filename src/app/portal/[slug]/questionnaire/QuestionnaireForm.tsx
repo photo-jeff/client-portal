@@ -27,7 +27,7 @@ export function QuestionnaireForm({
 }: Props) {
   const [step, setStep] = useState(0)
   const [saving, setSaving] = useState(false)
-  const [saved, setSaved] = useState(false)
+  const [savedAt, setSavedAt] = useState<number | null>(null)
   const [submitted, setSubmitted] = useState(isCompleted)
 
   const [data, setData] = useState<Record<string, string | boolean>>({
@@ -78,16 +78,23 @@ export function QuestionnaireForm({
     setData(prev => ({ ...prev, [key]: value }))
   }
 
-  async function saveDraft() {
+  async function saveDraft(currentData = data) {
     setSaving(true)
-    await fetch('/api/portal/questionnaire', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ slug, data, completed_at: null }),
-    })
-    setSaving(false)
-    setSaved(true)
-    setTimeout(() => setSaved(false), 2000)
+    try {
+      await fetch('/api/portal/questionnaire', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ slug, data: currentData, completed_at: null }),
+      })
+      setSavedAt(Date.now())
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  async function handleNext() {
+    await saveDraft()
+    setStep(s => s + 1)
   }
 
   async function handleSubmit() {
@@ -394,18 +401,24 @@ export function QuestionnaireForm({
 
       {/* Navigation */}
       <div className="flex items-center justify-between mt-6">
-        <div className="flex gap-3">
+        <div className="flex items-center gap-4">
           {step > 0 && (
             <Button variant="outline" size="sm" onClick={() => setStep(s => s - 1)}>Previous</Button>
           )}
-          <Button variant="outline" size="sm" onClick={saveDraft} disabled={saving}>
-            {saving ? 'Saving…' : saved ? 'Saved ✓' : 'Save draft'}
-          </Button>
+          {savedAt && (
+            <span className="text-xs text-[#919295]">
+              Saved {new Date(savedAt).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })} ✓
+            </span>
+          )}
         </div>
         {step < STEPS.length - 1 ? (
-          <Button variant="filled" size="sm" onClick={() => setStep(s => s + 1)}>Next</Button>
+          <Button variant="filled" size="sm" onClick={handleNext} disabled={saving}>
+            {saving ? 'Saving…' : 'Next'}
+          </Button>
         ) : (
-          <Button variant="filled" size="sm" onClick={handleSubmit} disabled={saving}>Submit questionnaire</Button>
+          <Button variant="filled" size="sm" onClick={handleSubmit} disabled={saving}>
+            {saving ? 'Saving…' : 'Submit questionnaire'}
+          </Button>
         )}
       </div>
     </div>

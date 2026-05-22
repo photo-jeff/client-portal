@@ -3,7 +3,7 @@ import { Divider } from '@/components/ui/Divider'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { ChevronLeft } from 'lucide-react'
-import { QuestionnaireWizard } from './QuestionnaireWizard'
+import { QuestionnaireForm } from './QuestionnaireForm'
 
 export default async function QuestionnairePage({
   params,
@@ -27,6 +27,10 @@ export default async function QuestionnairePage({
     .eq('client_id', client.id)
     .single()
 
+  const daysUntil = client.wedding_date
+    ? Math.ceil((new Date(client.wedding_date).getTime() - Date.now()) / 86_400_000)
+    : null
+
   return (
     <div className="max-w-2xl mx-auto">
       <Link href={`/portal/${slug}`} className="inline-flex items-center gap-2 text-xs tracking-[0.1em] uppercase text-[#919295] hover:text-[#535353] mb-8 transition-colors">
@@ -36,16 +40,18 @@ export default async function QuestionnairePage({
         <h1 className="font-serif text-4xl mb-2">Questionnaire</h1>
         <Divider />
         <p className="text-sm text-[#919295] mt-4 max-w-md mx-auto">
-          We&apos;ll have a quick chat to work through everything — from getting-ready locations to your suppliers.
+          Everything we need to know before your wedding day — from getting-ready locations to your suppliers.
         </p>
       </div>
-      <QuestionnaireWizard
+      <QuestionnaireForm
+        clientId={client.id}
         slug={slug}
         partner1={client.partner1_name}
         partner2={client.partner2_name}
-        weddingDate={client.wedding_date ?? null}
         ceremonyVenue={client.ceremony_venue ?? null}
+        ceremonyTime={client.ceremony_time ?? null}
         receptionVenue={client.reception_venue ?? null}
+        daysUntil={daysUntil}
         initialData={(existing?.data as Record<string, unknown>) ?? null}
         isCompleted={!!existing?.completed_at}
       />
