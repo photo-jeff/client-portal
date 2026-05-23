@@ -3,7 +3,7 @@ import { Divider } from '@/components/ui/Divider'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { ChevronLeft } from 'lucide-react'
-import { QuestionnaireForm } from './QuestionnaireForm'
+import { QuestionnaireSwitcher } from './QuestionnaireSwitcher'
 
 export default async function QuestionnairePage({
   params,
@@ -40,14 +40,15 @@ export default async function QuestionnairePage({
         <h1 className="font-serif text-4xl mb-2">Questionnaire</h1>
         <Divider />
         <p className="text-sm text-[#919295] mt-4 max-w-md mx-auto">
-          Everything we need to know before your wedding day — from getting-ready locations to your suppliers.
+          We&apos;ll chat through everything we need to know — or switch to a form if you&apos;d prefer to fill it in yourself.
         </p>
       </div>
-      <QuestionnaireForm
+      <QuestionnaireSwitcher
         clientId={client.id}
         slug={slug}
         partner1={client.partner1_name}
         partner2={client.partner2_name}
+        weddingDate={client.wedding_date ?? null}
         ceremonyVenue={client.ceremony_venue ?? null}
         ceremonyTime={client.ceremony_time ?? null}
         receptionVenue={client.reception_venue ?? null}

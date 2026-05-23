@@ -16,6 +16,7 @@ interface Props {
   receptionVenue: string | null
   initialData: Record<string, unknown> | null
   isCompleted: boolean
+  onSwitchToForm?: () => void
 }
 
 export function QuestionnaireWizard({
@@ -27,6 +28,7 @@ export function QuestionnaireWizard({
   receptionVenue,
   initialData,
   isCompleted,
+  onSwitchToForm,
 }: Props) {
   const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState('')
@@ -187,24 +189,44 @@ export function QuestionnaireWizard({
           Questionnaire saved ✓
         </p>
         <p style={{ fontSize: '14px', color: '#aaa', lineHeight: 1.7, maxWidth: '360px', margin: '0 auto 32px', fontWeight: 300 }}>
-          We have all your answers. If anything&apos;s changed — a supplier, a time, or anything else — just start a new chat and we&apos;ll update it.
+          We have all your answers. If anything&apos;s changed — a supplier, a time, or anything else — chat with us or switch to the form to edit directly.
         </p>
-        <button
-          onClick={startConversation}
-          style={{
-            background: 'transparent',
-            color: '#C9A96E',
-            border: '1px solid #C9A96E',
-            padding: '12px 32px',
-            fontSize: '12px',
-            letterSpacing: '2px',
-            textTransform: 'uppercase',
-            cursor: 'pointer',
-            fontWeight: 500,
-          }}
-        >
-          Update an answer
-        </button>
+        <div style={{ display: 'flex', gap: '12px', justifyContent: 'center', flexWrap: 'wrap' }}>
+          <button
+            onClick={startConversation}
+            style={{
+              background: 'transparent',
+              color: '#C9A96E',
+              border: '1px solid #C9A96E',
+              padding: '12px 32px',
+              fontSize: '12px',
+              letterSpacing: '2px',
+              textTransform: 'uppercase',
+              cursor: 'pointer',
+              fontWeight: 500,
+            }}
+          >
+            Update via chat
+          </button>
+          {onSwitchToForm && (
+            <button
+              onClick={onSwitchToForm}
+              style={{
+                background: 'transparent',
+                color: '#666',
+                border: '1px solid #444',
+                padding: '12px 32px',
+                fontSize: '12px',
+                letterSpacing: '2px',
+                textTransform: 'uppercase',
+                cursor: 'pointer',
+                fontWeight: 500,
+              }}
+            >
+              Edit in form
+            </button>
+          )}
+        </div>
       </div>
     )
   }
@@ -222,8 +244,11 @@ export function QuestionnaireWizard({
         <h2 style={{ fontFamily: 'Georgia, serif', fontSize: '28px', fontWeight: 300, color: '#fff', marginBottom: '12px' }}>
           Let&apos;s talk through your day
         </h2>
-        <p style={{ fontSize: '14px', color: '#aaa', lineHeight: 1.75, maxWidth: '380px', margin: '0 auto 32px', fontWeight: 300 }}>
+        <p style={{ fontSize: '14px', color: '#aaa', lineHeight: 1.75, maxWidth: '380px', margin: '0 auto 24px', fontWeight: 300 }}>
           Instead of a form, we&apos;ll have a quick chat — usually around 15 minutes. We&apos;ll cover everything from getting-ready locations to suppliers, so we&apos;re fully prepared on your day.
+        </p>
+        <p style={{ fontSize: '12px', color: '#555', marginBottom: '32px', fontWeight: 300 }}>
+          Prefer to fill in a form yourself? Use the button below.
         </p>
         {weddingDate && (
           <p style={{ fontSize: '12px', color: '#666', marginBottom: '28px', letterSpacing: '1px', textTransform: 'uppercase' }}>
@@ -231,22 +256,42 @@ export function QuestionnaireWizard({
             {ceremonyVenue && ` · ${ceremonyVenue}`}
           </p>
         )}
-        <button
-          onClick={startConversation}
-          style={{
-            background: 'transparent',
-            color: '#C9A96E',
-            border: '1px solid #C9A96E',
-            padding: '14px 36px',
-            fontSize: '12px',
-            letterSpacing: '2px',
-            textTransform: 'uppercase',
-            cursor: 'pointer',
-            fontWeight: 500,
-          }}
-        >
-          Let&apos;s get started
-        </button>
+        <div style={{ display: 'flex', gap: '12px', justifyContent: 'center', flexWrap: 'wrap' }}>
+          <button
+            onClick={startConversation}
+            style={{
+              background: 'transparent',
+              color: '#C9A96E',
+              border: '1px solid #C9A96E',
+              padding: '14px 36px',
+              fontSize: '12px',
+              letterSpacing: '2px',
+              textTransform: 'uppercase',
+              cursor: 'pointer',
+              fontWeight: 500,
+            }}
+          >
+            Let&apos;s get started
+          </button>
+          {onSwitchToForm && (
+            <button
+              onClick={onSwitchToForm}
+              style={{
+                background: 'transparent',
+                color: '#666',
+                border: '1px solid #444',
+                padding: '14px 36px',
+                fontSize: '12px',
+                letterSpacing: '2px',
+                textTransform: 'uppercase',
+                cursor: 'pointer',
+                fontWeight: 500,
+              }}
+            >
+              Fill in a form
+            </button>
+          )}
+        </div>
       </div>
     )
   }
@@ -262,6 +307,27 @@ export function QuestionnaireWizard({
         .jop-dot { animation: jop-bounce 1.2s infinite; }
         .jop-q-input:focus { border-color: #C9A96E !important; outline: none; }
       `}</style>
+
+      {/* Chat header with form escape hatch */}
+      {onSwitchToForm && (
+        <div style={{ display: 'flex', justifyContent: 'flex-end', padding: '12px 16px 0', borderBottom: '1px solid #222' }}>
+          <button
+            onClick={onSwitchToForm}
+            style={{
+              background: 'transparent',
+              border: 'none',
+              color: '#555',
+              fontSize: '11px',
+              letterSpacing: '1.5px',
+              textTransform: 'uppercase',
+              cursor: 'pointer',
+              padding: '4px 0 8px',
+            }}
+          >
+            Switch to form →
+          </button>
+        </div>
+      )}
 
       {/* Messages */}
       <div style={{ flex: 1, overflowY: 'auto', padding: '24px 20px' }}>

@@ -6,6 +6,7 @@ import { Divider } from '@/components/ui/Divider'
 import { Button } from '@/components/ui/Button'
 import { ClientIdFields } from './ClientIdFields'
 import { DeleteClientButton } from './DeleteClientButton'
+import { InviteButton } from './InviteButton'
 
 export default async function ClientDetailPage(props: { params: Promise<{ id: string }> }) {
   const { id } = await props.params
@@ -134,14 +135,24 @@ export default async function ClientDetailPage(props: { params: Promise<{ id: st
         </section>
 
         {/* Actions */}
-        <section className="flex items-center justify-between">
-          <Link href={`/portal/${client.portal_slug}`} target="_blank">
-            <Button variant="outline">View portal →</Button>
-          </Link>
-          <DeleteClientButton
-            clientId={client.id}
-            clientName={`${client.partner1_name} & ${client.partner2_name}`}
-          />
+        <section className="space-y-4">
+          <div className="flex items-center justify-between">
+            <Link href={`/portal/${client.portal_slug}`} target="_blank">
+              <Button variant="outline">View portal →</Button>
+            </Link>
+            <DeleteClientButton
+              clientId={client.id}
+              clientName={`${client.partner1_name} & ${client.partner2_name}`}
+            />
+          </div>
+          <div className="bg-white border border-[#e0ddd8] p-6 rounded-2xl">
+            <h3 className="text-xs tracking-[0.1em] uppercase text-[#888] mb-3">Send portal invite</h3>
+            <InviteButton
+              clientId={client.id}
+              email={client.email ?? null}
+              inviteSentAt={client.invite_sent_at ?? null}
+            />
+          </div>
         </section>
 
       </main>

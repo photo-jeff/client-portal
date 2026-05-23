@@ -20,6 +20,10 @@ interface Props {
 
 const STEPS = ['Your Day', 'The Fun Stuff', 'Your Suppliers']
 
+function firstName(fullName: string): string {
+  return fullName.trim().split(/\s+/)[0] || fullName
+}
+
 export function QuestionnaireForm({
   clientId, slug, partner1, partner2,
   ceremonyVenue, ceremonyTime, receptionVenue,
@@ -42,7 +46,7 @@ export function QuestionnaireForm({
     hot_meal_arranged: 'yes',
     speeches_timing: 'after',
     emergency_contact: '',
-    names_for_slideshow: `${partner1} & ${partner2}`,
+    names_for_slideshow: `${firstName(partner1)} & ${firstName(partner2)}`,
     aisle_escort: '',
     first_dance_song: '',
     choreographed_dance: '',
@@ -148,13 +152,13 @@ export function QuestionnaireForm({
               <p className="text-sm text-[#b5b8ba] mb-5">We'll be with you from the start — help us know where to go.</p>
               <div className="space-y-5">
                 <Input
-                  label={`Where is ${partner1} getting ready?`}
+                  label={`Where is ${firstName(partner1)} getting ready?`}
                   value={data.bride_prep_address as string}
                   onChange={e => update('bride_prep_address', e.target.value)}
                   placeholder="Full address including postcode"
                 />
                 <Input
-                  label={`And where is ${partner2}?`}
+                  label={`And where is ${firstName(partner2)}?`}
                   value={data.groom_prep_address as string}
                   onChange={e => update('groom_prep_address', e.target.value)}
                   placeholder="Full address (or 'Same venue' if together)"
@@ -220,7 +224,7 @@ export function QuestionnaireForm({
                     <p className="font-serif text-lg">{formatDisplayTime(timings.photographerArrival)}</p>
                   </div>
                   <div>
-                    <p className="text-xs text-[#b5b8ba] uppercase tracking-widest">{partner1} in dress by</p>
+                    <p className="text-xs text-[#b5b8ba] uppercase tracking-widest">{firstName(partner1)} in dress by</p>
                     <p className="font-serif text-lg">{formatDisplayTime(timings.brideReadyBy)}</p>
                   </div>
                 </div>
@@ -301,7 +305,7 @@ export function QuestionnaireForm({
                   hint="e.g. Emma & James, or Ems & J"
                 />
                 <Input
-                  label={`Who is walking ${partner1} down the aisle?`}
+                  label={`Who is walking ${firstName(partner1)} down the aisle?`}
                   value={data.aisle_escort as string}
                   onChange={e => update('aisle_escort', e.target.value)}
                   placeholder="Name (or 'Walking alone / together')"
@@ -374,8 +378,8 @@ export function QuestionnaireForm({
             <div className="grid sm:grid-cols-2 gap-5">
               <Input label="Venue coordinator" value={data.venue_contact as string} onChange={e => update('venue_contact', e.target.value)} placeholder="Name + @instagram" />
               <Input label="Wedding planner" value={data.wedding_planner as string} onChange={e => update('wedding_planner', e.target.value)} placeholder="Name + @instagram" />
-              <Input label={`${partner1}'s dress`} value={data.wedding_dress as string} onChange={e => update('wedding_dress', e.target.value)} placeholder="Designer & boutique" />
-              <Input label={`${partner2}'s suit`} value={data.groom_suit as string} onChange={e => update('groom_suit', e.target.value)} placeholder="Designer & shop" />
+              <Input label={`${firstName(partner1)}'s dress`} value={data.wedding_dress as string} onChange={e => update('wedding_dress', e.target.value)} placeholder="Designer & boutique" />
+              <Input label={`${firstName(partner2)}'s suit`} value={data.groom_suit as string} onChange={e => update('groom_suit', e.target.value)} placeholder="Designer & shop" />
               <Input label="Make-up artist(s)" value={data.makeup_artist as string} onChange={e => update('makeup_artist', e.target.value)} placeholder="Name + @instagram" />
               <Input label="Hair stylist" value={data.hair_stylist as string} onChange={e => update('hair_stylist', e.target.value)} placeholder="Name + @instagram" />
               <Input label="Florist" value={data.florist as string} onChange={e => update('florist', e.target.value)} placeholder="Name + @instagram" />
