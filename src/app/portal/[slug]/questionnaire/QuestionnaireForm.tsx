@@ -24,6 +24,41 @@ function firstName(fullName: string): string {
   return fullName.trim().split(/\s+/)[0] || fullName
 }
 
+function TimeSelect({
+  label,
+  value,
+  onChange,
+  hint,
+}: {
+  label: string
+  value: string
+  onChange: (v: string) => void
+  hint?: string
+}) {
+  const times: string[] = []
+  for (let h = 0; h < 24; h++) {
+    for (const m of [0, 15, 30, 45]) {
+      times.push(`${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`)
+    }
+  }
+  return (
+    <div className="flex flex-col h-full space-y-1">
+      <label className="block text-xs tracking-[0.1em] uppercase text-[#919295] font-medium">{label}</label>
+      {hint && <p className="text-xs text-[#b5b8ba]">{hint}</p>}
+      <select
+        value={value}
+        onChange={e => onChange(e.target.value)}
+        className="mt-auto w-full border border-[#e0ddd8] bg-white px-4 py-3 text-sm text-[#535353] focus:outline-none focus:border-[#535353] transition-colors rounded-lg"
+      >
+        <option value="">—</option>
+        {times.map(t => (
+          <option key={t} value={t}>{t}</option>
+        ))}
+      </select>
+    </div>
+  )
+}
+
 export function QuestionnaireForm({
   clientId, slug, partner1, partner2,
   ceremonyVenue, ceremonyTime, receptionVenue,
@@ -33,6 +68,8 @@ export function QuestionnaireForm({
   const [saving, setSaving] = useState(false)
   const [savedAt, setSavedAt] = useState<number | null>(null)
   const [submitted, setSubmitted] = useState(isCompleted)
+  const [mealError, setMealError] = useState<string | null>(null)
+  const [showMealWarning, setShowMealWarning] = useState(false)
 
   const [data, setData] = useState<Record<string, string | boolean>>({
     bride_prep_address: '',
@@ -43,7 +80,7 @@ export function QuestionnaireForm({
     ceremony_time: ceremonyTime ?? '',
     reception_location: receptionVenue ?? ceremonyVenue ?? '',
     wedding_breakfast_time: '',
-    hot_meal_arranged: 'yes',
+    hot_meal_arranged: '',
     speeches_timing: 'after',
     emergency_contact: '',
     names_for_slideshow: `${firstName(partner1)} & ${firstName(partner2)}`,
@@ -97,6 +134,11 @@ export function QuestionnaireForm({
   }
 
   async function handleNext() {
+    if (step === 0 && !data.hot_meal_arranged) {
+      setMealError('Please let us know whether a meal has been arranged')
+      return
+    }
+    setMealError(null)
     await saveDraft()
     setStep(s => s + 1)
   }
@@ -118,7 +160,7 @@ export function QuestionnaireForm({
         <CheckCircle size={32} className="mx-auto text-[#535353]" />
         <h2 className="font-serif text-2xl">Thank you!</h2>
         <p className="text-sm text-[#919295]">
-          Your questionnaire is in — we'll be in touch in the week before your wedding to go through final details.
+          Your questionnaire is in — we&apos;ll be in touch in the week before your wedding to go through final details.
         </p>
         <Button variant="outline" onClick={() => setSubmitted(false)} size="sm">Edit responses</Button>
       </div>
@@ -127,6 +169,21 @@ export function QuestionnaireForm({
 
   return (
     <div>
+      {/* Meal warning modal */}
+      {showMealWarning && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 px-4">
+          <div className="bg-white rounded-2xl p-8 max-w-sm w-full shadow-xl">
+            <h3 className="font-serif text-xl mb-3">Just a quick note</h3>
+            <p className="text-sm text-[#555] leading-relaxed mb-6">
+              Providing a hot meal for your photographer is something we include in our contract — it&apos;s a long day and we want to be at our very best for your evening coverage. Most venues are more than happy to accommodate this, so it&apos;s well worth dropping them a quick message if you haven&apos;t already. Thank you so much!
+            </p>
+            <Button variant="filled" size="sm" onClick={() => setShowMealWarning(false)}>
+              Got it, thanks
+            </Button>
+          </div>
+        </div>
+      )}
+
       {/* Step tabs */}
       <div className="flex items-center gap-0 mb-10">
         {STEPS.map((s, i) => (
@@ -149,7 +206,7 @@ export function QuestionnaireForm({
           <>
             <div>
               <p className="text-xs tracking-[0.12em] uppercase text-[#919295] mb-1">Morning preparations</p>
-              <p className="text-sm text-[#b5b8ba] mb-5">We'll be with you from the start — help us know where to go.</p>
+              <p className="text-sm text-[#b5b8ba] mb-5">We&apos;ll be with you from the start — help us know where to go.</p>
               <div className="space-y-5">
                 <Input
                   label={`Where is ${firstName(partner1)} getting ready?`}
@@ -158,7 +215,7 @@ export function QuestionnaireForm({
                   placeholder="Full address including postcode"
                 />
                 <Input
-                  label={`And where is ${firstName(partner2)}?`}
+                  label={`What about ${firstName(partner2)}?`}
                   value={data.groom_prep_address as string}
                   onChange={e => update('groom_prep_address', e.target.value)}
                   placeholder="Full address (or 'Same venue' if together)"
@@ -195,18 +252,16 @@ export function QuestionnaireForm({
                   hint={ceremonyVenue ? 'Pre-filled from your booking — update if needed' : undefined}
                 />
                 <div className="grid grid-cols-2 gap-4">
-                  <Input
+                  <TimeSelect
                     label="Ceremony start time"
-                    type="time"
                     value={data.ceremony_time as string}
-                    onChange={e => update('ceremony_time', e.target.value)}
+                    onChange={v => update('ceremony_time', v)}
                     hint={ceremonyTime ? 'Pre-filled from your booking' : undefined}
                   />
-                  <Input
+                  <TimeSelect
                     label="What time are you leaving for the ceremony?"
-                    type="time"
                     value={data.departure_time as string}
-                    onChange={e => update('departure_time', e.target.value)}
+                    onChange={v => update('departure_time', v)}
                     hint="Leave blank if your ceremony is at the same location"
                   />
                 </div>
@@ -241,11 +296,10 @@ export function QuestionnaireForm({
                   placeholder="Full address (or 'Same as ceremony')"
                   hint={receptionVenue || ceremonyVenue ? 'Pre-filled from your booking — update if needed' : undefined}
                 />
-                <Input
+                <TimeSelect
                   label="What time does the wedding breakfast start?"
-                  type="time"
                   value={data.wedding_breakfast_time as string}
-                  onChange={e => update('wedding_breakfast_time', e.target.value)}
+                  onChange={v => update('wedding_breakfast_time', v)}
                 />
               </div>
             </div>
@@ -254,15 +308,27 @@ export function QuestionnaireForm({
               <label className="block text-xs tracking-[0.1em] uppercase text-[#919295] font-medium">
                 Have you arranged a meal for us with the venue?
               </label>
-              <p className="text-xs text-[#b5b8ba]">It's a long day and we want to be at our best for your evening coverage — most venues are happy to accommodate us.</p>
+              <p className="text-xs text-[#b5b8ba]">It&apos;s a long day and we want to be at our best for your evening coverage — most venues are happy to accommodate us.</p>
               <div className="flex gap-6 mt-2">
                 {[{ value: 'yes', label: 'Yes — all sorted' }, { value: 'no', label: 'Not yet' }].map(opt => (
                   <label key={opt.value} className="flex items-center gap-2 text-sm cursor-pointer">
-                    <input type="radio" name="hot_meal" value={opt.value} checked={data.hot_meal_arranged === opt.value} onChange={() => update('hot_meal_arranged', opt.value)} className="accent-[#535353]" />
+                    <input
+                      type="radio"
+                      name="hot_meal"
+                      value={opt.value}
+                      checked={data.hot_meal_arranged === opt.value}
+                      onChange={() => {
+                        update('hot_meal_arranged', opt.value)
+                        setMealError(null)
+                        if (opt.value === 'no') setShowMealWarning(true)
+                      }}
+                      className="accent-[#535353]"
+                    />
                     {opt.label}
                   </label>
                 ))}
               </div>
+              {mealError && <p className="text-xs text-red-500">{mealError}</p>}
             </div>
 
             <div className="space-y-3">
@@ -367,7 +433,7 @@ export function QuestionnaireForm({
                 <p className="text-sm text-[#919295]">
                   Nothing to worry about yet — supplier details can be filled in closer to the day.
                 </p>
-                <p className="text-xs text-[#b5b8ba]">We'll remind you to come back about 8 weeks before your wedding.</p>
+                <p className="text-xs text-[#b5b8ba]">We&apos;ll remind you to come back about 8 weeks before your wedding.</p>
               </div>
             ) : (
               <p className="text-xs text-[#b5b8ba]">
@@ -376,7 +442,7 @@ export function QuestionnaireForm({
             )}
 
             <div className="grid sm:grid-cols-2 gap-5">
-              <Input label="Venue coordinator" value={data.venue_contact as string} onChange={e => update('venue_contact', e.target.value)} placeholder="Name + @instagram" />
+              <Input label="Venue coordinator" value={data.venue_contact as string} onChange={e => update('venue_contact', e.target.value)} placeholder="Name + email or phone" />
               <Input label="Wedding planner" value={data.wedding_planner as string} onChange={e => update('wedding_planner', e.target.value)} placeholder="Name + @instagram" />
               <Input label={`${firstName(partner1)}'s dress`} value={data.wedding_dress as string} onChange={e => update('wedding_dress', e.target.value)} placeholder="Designer & boutique" />
               <Input label={`${firstName(partner2)}'s suit`} value={data.groom_suit as string} onChange={e => update('groom_suit', e.target.value)} placeholder="Designer & shop" />
