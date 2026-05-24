@@ -59,6 +59,8 @@ const ZOHO_REFRESH_TOKEN = process.env.ZOHO_REFRESH_TOKEN  || '';
 const WEBHOOK_SECRET     = process.env.WEBHOOK_SECRET      || '';
 const PORTAL_SECRET      = process.env.PORTAL_WEBHOOK_SECRET || '';
 const PORTAL_BASE        = 'https://portal.jeffoliverphotography.com';
+const SUPABASE_URL       = 'https://yuclctdwlhffqetdkdkw.supabase.co';
+const SUPABASE_KEY       = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
 
 // In-memory access token cache
 let cachedAccessToken = '';
@@ -280,6 +282,37 @@ async function pwProcessBooking(email, name, shootDate, newStatus) {
   return { matched: true, jobName: job.name, numericJobId: job.numericJobId, newStatus, shootDate };
 }
 
+// ── Supabase: write pre-wedding shoot date to client portal ──────────────────
+async function writePrewedToSupabase(email, shootAt, rescheduleUrl) {
+  if (!email) return;
+  try {
+    const body = shootAt
+      ? { prewedding_shoot_at: shootAt, prewedding_reschedule_url: rescheduleUrl }
+      : { prewedding_shoot_at: null,    prewedding_reschedule_url: null };
+    const res = await fetch(
+      `${SUPABASE_URL}/rest/v1/clients?email=eq.${encodeURIComponent(email)}`,
+      {
+        method:  'PATCH',
+        headers: {
+          'apikey':        SUPABASE_KEY,
+          'Authorization': `Bearer ${SUPABASE_KEY}`,
+          'Content-Type':  'application/json',
+          'Prefer':        'return=minimal',
+        },
+        body: JSON.stringify(body),
+      }
+    );
+    if (res.ok) {
+      console.log(`Supabase pre-wed updated for ${email}: ${shootAt ?? 'cleared'}`);
+    } else {
+      const text = await res.text();
+      console.error(`Supabase pre-wed error ${res.status}: ${text}`);
+    }
+  } catch (err) {
+    console.error(`Supabase pre-wed write failed: ${err.message}`);
+  }
+}
+
 // Load Pre-Wed cache from disk on startup
 if (existsSync(CACHE_FILE_PW)) {
   try {
@@ -362,33 +395,65 @@ function normaliseTime(raw) {
 }
 
 // ------------------------------------------------------------
-// VSCO ULID LOOKUP
-// Fetches all jobs from VSCO API and finds the ULID matching a numeric job ID.
-// The VSCO API ignores all filter params — must filter client-side.
+// VSCO ID LOOKUP
+// Tries the MCP cache first (fast). If the job isn't there —
+// e.g. a brand-new booking — falls back to the live VSCO API
+// using the correct paginated endpoint (/job?limit=100&page=N).
+// Returns both ULID and numeric ID.
 // ------------------------------------------------------------
-async function lookupVscoUlid(numericJobId) {
-  if (!numericJobId) return null;
-  try {
-    const res = await fetch(`${VSCO_API_PW}/jobs`, {
-      headers: { 'X-API-KEY': VSCO_API_KEY_PW, 'Accept': 'application/json' },
+async function lookupVscoIds(jobId) {
+  if (!jobId) return { ulid: null, numericId: null };
+
+  const isUlid = /^01[0-9a-z]{24}$/.test(String(jobId).toLowerCase());
+
+  function findInList(jobs) {
+    if (isUlid) return jobs.find(j => j.id === jobId);
+    return jobs.find(j => {
+      const href = j.links?.self?.managerHref || '';
+      return href.split('/').pop() === String(jobId);
     });
-    if (!res.ok) throw new Error(`VSCO API ${res.status}`);
-    const data = await res.json();
-    const jobs = data.items || [];
-    const match = jobs.find(job => {
-      const href = job.links?.self?.managerHref || '';
-      return href.split('/').pop() === String(numericJobId);
-    });
-    if (!match) {
-      console.log(`VSCO ULID lookup: no job found for numeric ID ${numericJobId}`);
-      return null;
-    }
-    console.log(`VSCO ULID lookup: ${numericJobId} → ${match.id}`);
-    return match.id || null;
-  } catch (e) {
-    console.error(`VSCO ULID lookup failed: ${e.message}`);
-    return null;
   }
+
+  function extractIds(match) {
+    const href      = match.links?.self?.managerHref || '';
+    const numericId = href.split('/').pop();
+    console.log(`VSCO lookup: ULID=${match.id}, numeric=${numericId}`);
+    return { ulid: match.id, numericId };
+  }
+
+  // 1. Try cache first
+  try {
+    const raw  = readFileSync(MCP_CACHE_FILE_PW, 'utf8');
+    const jobs = JSON.parse(raw).jobs || [];
+    const match = findInList(jobs);
+    if (match) return extractIds(match);
+    console.log(`VSCO lookup: ${jobId} not in cache — trying live API`);
+  } catch (e) {
+    console.log(`VSCO lookup: cache read failed (${e.message}) — trying live API`);
+  }
+
+  // 2. Fall back to live API (paginated)
+  try {
+    let page = 1;
+    while (true) {
+      const res = await fetch(`${VSCO_API_PW}/job?limit=100&page=${page}`, {
+        headers: { 'X-API-KEY': VSCO_API_KEY_PW, 'Accept': 'application/json' },
+      });
+      if (!res.ok) throw new Error(`VSCO API ${res.status}`);
+      const data = await res.json();
+      const jobs = data.items || [];
+      if (jobs.length === 0) break;
+      const match = findInList(jobs);
+      if (match) return extractIds(match);
+      if (page >= (data.meta?.totalPages || 1)) break;
+      page++;
+    }
+    console.log(`VSCO lookup: ${jobId} not found in live API`);
+  } catch (e) {
+    console.error(`VSCO lookup live API failed: ${e.message}`);
+  }
+
+  return { ulid: isUlid ? jobId : null, numericId: isUlid ? null : String(jobId) };
 }
 
 // ------------------------------------------------------------
@@ -457,16 +522,15 @@ async function findZohoContact(email) {
 // CREATE OR UPDATE ZOHO CONTACT
 // ------------------------------------------------------------
 async function syncZohoContact(payload) {
-  const { firstName, lastName, email, phone, address: rawAddress, jobId, vscoUlid } = payload;
+  const { firstName, lastName, email, phone, address: rawAddress, numericJobId, vscoUlid } = payload;
 
   const contactName  = `${firstName} ${lastName}`.trim();
   const addr         = parseAddress(rawAddress);
   const cleanedPhone = cleanPhone(phone);
 
-  const customFields = [
-    { label: 'VSCO Job ID', value: jobId || '' },
-  ];
-  if (vscoUlid) customFields.push({ label: 'VSCO ULID', value: vscoUlid });
+  const customFields = [];
+  if (numericJobId) customFields.push({ label: 'VSCO Job ID', value: String(numericJobId) });
+  if (vscoUlid)     customFields.push({ label: 'VSCO ULID',   value: vscoUlid });
 
   const contactBody = {
     contact_name:      contactName,
@@ -578,14 +642,14 @@ const server = http.createServer(async (req, res) => {
         return;
       }
 
-      // Look up VSCO ULID from numeric job ID (best-effort, non-blocking on failure)
-      let vscoUlid = null;
+      // Resolve both VSCO IDs (ULID + numeric) from whichever form the email sent
+      let vscoUlid = null, numericJobId = null;
       if (payload.jobId) {
-        vscoUlid = await lookupVscoUlid(payload.jobId);
+        ({ ulid: vscoUlid, numericId: numericJobId } = await lookupVscoIds(payload.jobId));
       }
 
       // Sync to Zoho
-      const result = await syncZohoContact({ ...payload, vscoUlid });
+      const result = await syncZohoContact({ ...payload, vscoUlid, numericJobId });
       console.log('Zoho sync result:', result);
 
       // Create client portal (fire-and-forget — doesn't block response)
@@ -601,14 +665,15 @@ const server = http.createServer(async (req, res) => {
           method:  'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            partner1_name:  `${payload.firstName} ${payload.lastName}`.trim(),
-            partner2_name:  `${groomFirst} ${groomLast}`.trim() || null,
-            email:          payload.email,
-            wedding_date:   normaliseDate(rawDate),
-            ceremony_venue: venue || null,
-            ceremony_time:  normaliseTime(rawTime),
-            package_name:   packageName || null,
-            vsco_job_id:    payload.jobId,
+            partner1_name:   `${payload.firstName} ${payload.lastName}`.trim(),
+            partner2_name:   `${groomFirst} ${groomLast}`.trim() || null,
+            email:           payload.email,
+            wedding_date:    normaliseDate(rawDate),
+            ceremony_venue:  venue || null,
+            ceremony_time:   normaliseTime(rawTime),
+            package_name:    packageName || null,
+            vsco_job_id:     vscoUlid || payload.jobId,
+            zoho_contact_id: result.contact_id || null,
           }),
         }).then(r => r.json()).then(d => console.log('Portal result:', JSON.stringify(d)))
           .catch(e => console.error('Portal creation failed:', e.message));
@@ -648,6 +713,11 @@ const server = http.createServer(async (req, res) => {
       else { res.writeHead(200); res.end('OK'); return; }
 
       console.log(`Pre-Wed ${eventType}: ${name} (${email})`);
+
+      // Write shoot date + reschedule URL to Supabase (powers the client portal)
+      const shootAt       = eventType === 'invitee.created' ? (data?.scheduled_event?.start_time ?? null) : null;
+      const rescheduleUrl = eventType === 'invitee.created' ? (data?.reschedule_url ?? null)              : null;
+      await writePrewedToSupabase(email, shootAt, rescheduleUrl);
 
       const result = await pwProcessBooking(email, name, shootDate, newStatus);
       res.writeHead(200, { 'Content-Type': 'application/json' });
