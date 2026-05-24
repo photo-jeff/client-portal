@@ -1,5 +1,6 @@
 'use client'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
+import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { CalendarHeart } from 'lucide-react'
 
@@ -12,6 +13,8 @@ interface Props {
 export function PrewedShootCard({ shootAt, rescheduleUrl, slug }: Props) {
   const storageKey = `prewed-booked-${slug}`
   const [optimisticBooked, setOptimisticBooked] = useState(false)
+  const pollRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const router  = useRouter()
 
   // Pick up the booking flag set by PrewedBookingWidget after the user books
   useEffect(() => {
@@ -19,6 +22,29 @@ export function PrewedShootCard({ shootAt, rescheduleUrl, slug }: Props) {
       setOptimisticBooked(true)
     }
   }, [shootAt, storageKey])
+
+  // When in optimistic state and Supabase doesn't have the date yet,
+  // poll every 8s so the dashboard auto-updates when the webhook fires.
+  useEffect(() => {
+    if (shootAt || !optimisticBooked) return  // nothing to do
+
+    async function poll() {
+      try {
+        const res = await fetch(`/api/portal/prewedding-check/${slug}`)
+        const { shootAt: live } = await res.json()
+        if (live) {
+          // Real data arrived — refresh the server component to show the date
+          sessionStorage.removeItem(storageKey)
+          router.refresh()
+          return
+        }
+      } catch { /* ignore */ }
+      pollRef.current = setTimeout(poll, 8000)
+    }
+
+    pollRef.current = setTimeout(poll, 4000)
+    return () => { if (pollRef.current) clearTimeout(pollRef.current) }
+  }, [optimisticBooked, shootAt, slug, storageKey, router])
 
   // Format booked date/time in UK timezone
   let formattedDate = ''
