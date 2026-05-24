@@ -701,7 +701,8 @@ const server = http.createServer(async (req, res) => {
       const body      = await readBody(req);
       const eventType = body.event;
       const data      = body.payload;
-      const eventName = data?.event_type?.name || '';
+      // Calendly v2 webhook: event name is at scheduled_event.name, NOT event_type.name
+      const eventName = data?.scheduled_event?.name || data?.event_type?.name || '';
 
       if (!eventName.includes('Pre-Wed')) {
         res.writeHead(200); res.end('OK - not Pre-Wed'); return;
