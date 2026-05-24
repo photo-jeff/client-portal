@@ -2,33 +2,11 @@
 import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import Script from 'next/script'
-import { CheckCircle, X } from 'lucide-react'
+import Link from 'next/link'
+import { CheckCircle } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 
 const CALENDLY_URL = 'https://calendly.com/jeffoliverphoto/pre-wed-shoot'
-
-const FAQ = [
-  {
-    q: 'Where does the shoot take place?',
-    a: "Entirely up to you — a favourite spot, a park, somewhere that means something to you, or even at home. We'll chat beforehand to find somewhere that feels right.",
-  },
-  {
-    q: 'How long does it last?',
-    a: "Usually about an hour to an hour and a half — enough time to get relaxed and natural without it feeling like an endurance test.",
-  },
-  {
-    q: 'What should we wear?',
-    a: "Something you feel confident and comfortable in. It doesn't need to be formal. Avoid very busy patterns; complementary tones look lovely together.",
-  },
-  {
-    q: 'When will we receive the photos?',
-    a: "Usually within 2–3 weeks. We'll send you a private online gallery you can download from directly.",
-  },
-  {
-    q: 'What if we need to reschedule?',
-    a: "No problem — use the Reschedule button to pick a new time. Just try to give a few days' notice where you can.",
-  },
-]
 
 // Calendly widget type
 declare global {
@@ -48,10 +26,10 @@ interface Props {
   rescheduleUrl: string | null
   partnerName: string
   clientEmail: string | null
+  slug: string
 }
 
-export function PrewedBookingWidget({ shootAt, rescheduleUrl, partnerName, clientEmail }: Props) {
-  const [showFaq, setShowFaq] = useState(false)
+export function PrewedBookingWidget({ shootAt, rescheduleUrl, partnerName, clientEmail, slug }: Props) {
   const [optimisticBooked, setOptimisticBooked] = useState(false)
   const containerRef = useRef<HTMLDivElement>(null)
   const router = useRouter()
@@ -115,31 +93,6 @@ export function PrewedBookingWidget({ shootAt, rescheduleUrl, partnerName, clien
         onLoad={initWidget}
       />
 
-      {/* FAQ modal */}
-      {showFaq && (
-        <div className="fixed inset-0 bg-black/40 flex items-start justify-center z-50 px-4 py-12 overflow-y-auto">
-          <div className="bg-white rounded-2xl p-8 max-w-lg w-full shadow-xl">
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="font-serif text-2xl">Pre-Wedding Shoot</h3>
-              <button onClick={() => setShowFaq(false)} className="text-[#919295] hover:text-[#535353] transition-colors">
-                <X size={20} />
-              </button>
-            </div>
-            <div className="space-y-5">
-              {FAQ.map(({ q, a }) => (
-                <div key={q}>
-                  <p className="text-sm font-medium text-[#1a1a1a] mb-1">{q}</p>
-                  <p className="text-sm text-[#555] leading-relaxed">{a}</p>
-                </div>
-              ))}
-            </div>
-            <div className="mt-8">
-              <Button variant="outline" size="sm" onClick={() => setShowFaq(false)}>Close</Button>
-            </div>
-          </div>
-        </div>
-      )}
-
       {isBooked ? (
         /* Confirmed state */
         <div className="bg-white border border-[#e0ddd8] rounded-2xl p-10 text-center space-y-4">
@@ -157,7 +110,9 @@ export function PrewedBookingWidget({ shootAt, rescheduleUrl, partnerName, clien
             </p>
           )}
           <div className="flex justify-center gap-3 pt-2">
-            <Button variant="outline" size="sm" onClick={() => setShowFaq(true)}>FAQ</Button>
+            <Link href={`/portal/${slug}/pre-wed-shoot/faq`}>
+              <Button variant="outline" size="sm">FAQ</Button>
+            </Link>
             {rescheduleUrl && (
               <a href={rescheduleUrl} target="_blank" rel="noopener noreferrer">
                 <Button variant="outline" size="sm">Reschedule</Button>

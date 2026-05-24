@@ -36,6 +36,9 @@ export default async function AdminPage() {
             <Link href="/admin/faq">
               <Button variant="outline" size="sm">FAQ</Button>
             </Link>
+            <Link href="/admin/prewed-faq">
+              <Button variant="outline" size="sm">Pre-wed FAQ</Button>
+            </Link>
             <Link href="/admin/clients/new">
               <Button variant="outline" size="sm">New portal</Button>
             </Link>

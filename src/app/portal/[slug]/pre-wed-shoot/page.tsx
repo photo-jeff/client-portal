@@ -50,6 +50,7 @@ export default async function PrewedShootPage({
         rescheduleUrl={rescheduleUrl}
         partnerName={client.partner1_name ?? ''}
         clientEmail={client.email ?? null}
+        slug={slug}
       />
     </div>
   )
