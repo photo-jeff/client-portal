@@ -283,14 +283,18 @@ async function pwProcessBooking(email, name, shootDate, newStatus) {
 }
 
 // ── Supabase: write pre-wedding shoot date to client portal ──────────────────
-async function writePrewedToSupabase(email, shootAt, rescheduleUrl) {
-  if (!email) return;
+// slug (from utm_content) is preferred over email for matching — more reliable.
+async function writePrewedToSupabase(email, shootAt, rescheduleUrl, slug) {
+  if (!email && !slug) return;
   try {
     const body = shootAt
       ? { prewedding_shoot_at: shootAt, prewedding_reschedule_url: rescheduleUrl }
       : { prewedding_shoot_at: null,    prewedding_reschedule_url: null };
+    const filter = slug
+      ? `portal_slug=eq.${encodeURIComponent(slug)}`
+      : `email=eq.${encodeURIComponent(email)}`;
     const res = await fetch(
-      `${SUPABASE_URL}/rest/v1/clients?email=eq.${encodeURIComponent(email)}`,
+      `${SUPABASE_URL}/rest/v1/clients?${filter}`,
       {
         method:  'PATCH',
         headers: {
@@ -303,7 +307,8 @@ async function writePrewedToSupabase(email, shootAt, rescheduleUrl) {
       }
     );
     if (res.ok) {
-      console.log(`Supabase pre-wed updated for ${email}: ${shootAt ?? 'cleared'}`);
+      const matchedBy = slug ? `slug=${slug}` : `email=${email}`;
+      console.log(`Supabase pre-wed updated for ${matchedBy}: ${shootAt ?? 'cleared'}`);
     } else {
       const text = await res.text();
       console.error(`Supabase pre-wed error ${res.status}: ${text}`);
@@ -717,7 +722,8 @@ const server = http.createServer(async (req, res) => {
       // Write shoot date + reschedule URL to Supabase (powers the client portal)
       const shootAt       = eventType === 'invitee.created' ? (data?.scheduled_event?.start_time ?? null) : null;
       const rescheduleUrl = eventType === 'invitee.created' ? (data?.reschedule_url ?? null)              : null;
-      await writePrewedToSupabase(email, shootAt, rescheduleUrl);
+      const slug          = (data?.tracking?.utm_content || '').trim() || null;
+      await writePrewedToSupabase(email, shootAt, rescheduleUrl, slug);
 
       const result = await pwProcessBooking(email, name, shootDate, newStatus);
       res.writeHead(200, { 'Content-Type': 'application/json' });
@@ -758,11 +764,20 @@ const server = http.createServer(async (req, res) => {
     (async () => {
       try {
         const NON_JOP  = new Set(['01dys6x70rk9b9v3jew7b49qk5','01e1f718r8p6d8nzasdn1zy4ar']);
+
+        // Build dual lookup: both ULID and numeric job ID → job
         const cacheRaw = readFileSync('/Users/jeff/mcp-workspace/vsco-cache.json', 'utf8');
         const { jobs: allJobs } = JSON.parse(cacheRaw);
-        const vscoJobs = allJobs
-          .filter(j => j.stage === 'booked' && !NON_JOP.has(j.brandId) && (j.accountBalance || 0) > 0)
-          .map(j => ({ id: j.id, name: (j.name||j.title||'').toLowerCase(), displayName: j.name||j.title, outstanding: j.accountBalance/100 }));
+        const byUlid    = new Map();
+        const byNumeric = new Map();
+        for (const j of allJobs) {
+          if (j.stage !== 'booked' || NON_JOP.has(j.brandId) || (j.accountBalance || 0) <= 0) continue;
+          const job = { id: j.id, displayName: j.name || j.title, outstanding: j.accountBalance / 100 };
+          byUlid.set(j.id, job);
+          // Extract numeric ID from managerHref e.g. https://workspace.vsco.co/jobs/view/10591092
+          const numericMatch = j.links?.self?.managerHref?.match(/\/jobs\/view\/(\d+)/);
+          if (numericMatch) byNumeric.set(numericMatch[1], job);
+        }
 
         const since = new Date(); since.setDate(since.getDate() - 120);
         const sinceStr = since.toISOString().split('T')[0];
@@ -777,17 +792,41 @@ const server = http.createServer(async (req, res) => {
             if ((inv.total||0) <= 600) continue;
             const payDate = inv.last_payment_date || inv.date || '';
             if (payDate && payDate < sinceStr) continue;
-            zohoInvoices.push({ customer_name: inv.customer_name, amount: inv.total, date: payDate, invoice_number: inv.invoice_number });
+            // Pull VSCO Job ID from invoice custom field (may be ULID or numeric)
+            // Falls back to contact-level lookup later if not set on the invoice
+            const vscoJobId = (inv.custom_fields || []).find(f => f.label === 'VSCO Job ID')?.value || '';
+            zohoInvoices.push({ customer_name: inv.customer_name, amount: inv.total, date: payDate, invoice_number: inv.invoice_number, vscoJobId, customer_id: inv.customer_id });
           }
           const oldest = invoices[invoices.length-1]; const od = oldest?.last_payment_date||oldest?.date||'';
           if (od && od < sinceStr) break; if (!d.page_context?.has_more_page) break; page++;
         }
 
+        // Build a contact-level VSCO Job ID cache for invoices that lack it
+        const contactJobIdCache = new Map(); // customer_id → vscoJobId
+
         const matches = [];
         for (const inv of zohoInvoices) {
-          const fn  = inv.customer_name.split(' ')[0].toLowerCase();
-          const job = vscoJobs.find(j => Math.abs(j.outstanding - inv.amount) < 0.01 && j.name.includes(fn));
-          if (job) matches.push({ inv, job });
+          let vscoJobId = inv.vscoJobId;
+
+          // If not on the invoice, try the contact record
+          if (!vscoJobId && inv.customer_id) {
+            if (!contactJobIdCache.has(inv.customer_id)) {
+              try {
+                const token = await getAccessToken();
+                const cr = await fetch(`${ZOHO_BASE}/contacts/${inv.customer_id}?organization_id=${ZOHO_ORG}`, { headers: { Authorization: `Zoho-oauthtoken ${token}` } });
+                const cd = await cr.json();
+                const contactField = (cd.contact?.custom_fields || []).find(f => f.label === 'VSCO Job ID');
+                contactJobIdCache.set(inv.customer_id, contactField?.value || '');
+              } catch(e) {
+                contactJobIdCache.set(inv.customer_id, '');
+              }
+            }
+            vscoJobId = contactJobIdCache.get(inv.customer_id) || '';
+          }
+
+          if (!vscoJobId) continue;
+          const job = byUlid.get(vscoJobId) || byNumeric.get(vscoJobId);
+          if (job) matches.push({ inv: { ...inv, vscoJobId }, job });
         }
 
         if (!matches.length) { res.writeHead(200,{'Content-Type':'application/json'}); res.end(JSON.stringify({synced:0,failed:0,message:'Already in sync',ms:Date.now()-t0})); return; }

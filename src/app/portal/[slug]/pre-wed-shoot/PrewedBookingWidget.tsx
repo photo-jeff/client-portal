@@ -121,7 +121,7 @@ export function PrewedBookingWidget({ shootAt, rescheduleUrl, partnerName, clien
     bgPollRef.current = setTimeout(bgPoll, BG_POLL_INTERVAL)
   }
 
-  const embedUrl = `${CALENDLY_URL}?hide_gdpr_banner=1&background_color=faf9f7&text_color=1a1a1a&primary_color=1a1a1a`
+  const embedUrl = `${CALENDLY_URL}?hide_gdpr_banner=1&background_color=faf9f7&text_color=1a1a1a&primary_color=1a1a1a&utm_content=${encodeURIComponent(slug)}`
 
   function initWidget() {
     if (!containerRef.current || !window.Calendly) return
