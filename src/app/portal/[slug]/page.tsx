@@ -91,8 +91,7 @@ export default async function PortalDashboard({
         <PrewedShootCard
           shootAt={shootAt}
           rescheduleUrl={rescheduleUrl}
-          partnerName={client.partner1_name ?? ''}
-          clientEmail={client.email ?? null}
+          slug={slug}
         />
       )}
 

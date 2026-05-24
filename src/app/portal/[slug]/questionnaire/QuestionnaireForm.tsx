@@ -32,7 +32,7 @@ function Drum({ items, value, onChange }: { items: string[]; value: string; onCh
   const listRef = useRef<HTMLDivElement>(null)
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  // Scroll to the right position whenever the drum mounts (picker opens)
+  // With center alignment, scrollTop = idx * ITEM_H
   useEffect(() => {
     const idx = items.indexOf(value)
     if (listRef.current && idx >= 0) {
@@ -52,20 +52,10 @@ function Drum({ items, value, onChange }: { items: string[]; value: string; onCh
 
   return (
     <div className="relative" style={{ width: 72, height: ITEM_H * 5 }}>
-      {/* Selection highlight */}
+      {/* Selection highlight — sits behind the center row */}
       <div
-        className="absolute inset-x-2 pointer-events-none z-10 rounded-lg bg-[#f0ede8]"
+        className="absolute inset-x-1 pointer-events-none z-10 bg-[#f0ede8] rounded-lg"
         style={{ top: ITEM_H * 2, height: ITEM_H }}
-      />
-      {/* Top fade */}
-      <div
-        className="absolute inset-x-0 top-0 pointer-events-none z-20 bg-gradient-to-b from-white to-transparent"
-        style={{ height: ITEM_H * 2 }}
-      />
-      {/* Bottom fade */}
-      <div
-        className="absolute inset-x-0 bottom-0 pointer-events-none z-20 bg-gradient-to-t from-white to-transparent"
-        style={{ height: ITEM_H * 2 }}
       />
       <div
         ref={listRef}
@@ -81,7 +71,7 @@ function Drum({ items, value, onChange }: { items: string[]; value: string; onCh
         {items.map(item => (
           <div
             key={item}
-            style={{ scrollSnapAlign: 'start' as const, height: ITEM_H }}
+            style={{ scrollSnapAlign: 'center' as const, height: ITEM_H }}
             className="flex items-center justify-center text-base font-medium text-[#535353] select-none"
           >
             {item}
@@ -233,9 +223,9 @@ export function QuestionnaireForm({
     ...(initialData as Record<string, string | boolean> ?? {}),
   })
 
-  const timings = data.departure_time
-    ? calculatePhotographerTimings(data.departure_time as string)
-    : null
+  // Use departure time if set, otherwise fall back to ceremony time
+  const timingsBasis = (data.departure_time as string) || (data.ceremony_time as string) || ''
+  const timings = timingsBasis ? calculatePhotographerTimings(timingsBasis) : null
 
   function update(key: string, value: string | boolean) {
     setData(prev => ({ ...prev, [key]: value }))

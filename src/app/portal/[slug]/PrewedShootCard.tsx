@@ -1,58 +1,42 @@
 'use client'
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
+import Link from 'next/link'
 import { CalendarHeart, X } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
-
-const CALENDLY_URL = 'https://calendly.com/jeffoliverphoto/pre-wed-shoot'
 
 const FAQ = [
   {
     q: 'Where does the shoot take place?',
-    a: 'Entirely up to you — a favourite spot in your city, a park, somewhere that means something to you, or even at home. We\'ll chat beforehand to find somewhere that feels right.',
+    a: "Entirely up to you — a favourite spot, a park, somewhere that means something to you, or even at home. We'll chat beforehand to find somewhere that feels right.",
   },
   {
     q: 'How long does it last?',
-    a: 'Usually about an hour to an hour and a half — enough time to get relaxed and natural without it feeling like an endurance test.',
+    a: "Usually about an hour to an hour and a half — enough time to get relaxed and natural without it feeling like an endurance test.",
   },
   {
     q: 'What should we wear?',
-    a: 'Something you feel confident and comfortable in. It doesn\'t need to be formal — casual works beautifully. Avoid very busy patterns; complementary tones look lovely together.',
+    a: "Something you feel confident and comfortable in. It doesn't need to be formal. Avoid very busy patterns; complementary tones look lovely together.",
   },
   {
     q: 'When will we receive the photos?',
-    a: 'Usually within 2–3 weeks. We\'ll send you a private online gallery you can download from directly.',
+    a: "Usually within 2–3 weeks. We'll send you a private online gallery you can download from directly.",
   },
   {
     q: 'What if we need to reschedule?',
-    a: 'No problem at all — use the Reschedule button on this page to pick a new time. Just try to give us a few days\' notice where you can.',
+    a: "No problem — use the Reschedule button to pick a new time. Just try to give a few days' notice where you can.",
   },
 ]
 
 interface Props {
   shootAt: string | null
   rescheduleUrl: string | null
-  partnerName: string
-  clientEmail: string | null
+  slug: string
 }
 
-export function PrewedShootCard({ shootAt, rescheduleUrl, partnerName, clientEmail }: Props) {
+export function PrewedShootCard({ shootAt, rescheduleUrl, slug }: Props) {
   const [showFaq, setShowFaq] = useState(false)
-  const [optimisticBooked, setOptimisticBooked] = useState(false)
 
-  // Listen for Calendly booking completion from within the iframe
-  useEffect(() => {
-    function handleMessage(e: MessageEvent) {
-      if (e.origin === 'https://calendly.com' && e.data?.event === 'calendly.event_scheduled') {
-        setOptimisticBooked(true)
-      }
-    }
-    window.addEventListener('message', handleMessage)
-    return () => window.removeEventListener('message', handleMessage)
-  }, [])
-
-  const isBooked = !!shootAt || optimisticBooked
-
-  // Format date/time in UK timezone
+  // Format booked date/time in UK timezone
   let formattedDate = ''
   let formattedTime = ''
   if (shootAt) {
@@ -67,18 +51,9 @@ export function PrewedShootCard({ shootAt, rescheduleUrl, partnerName, clientEma
     })
   }
 
-  // Build Calendly embed URL with pre-fill and branding
-  const embedUrl = new URL(CALENDLY_URL)
-  embedUrl.searchParams.set('hide_gdpr_banner', '1')
-  embedUrl.searchParams.set('background_color', 'faf9f7')
-  embedUrl.searchParams.set('text_color', '1a1a1a')
-  embedUrl.searchParams.set('primary_color', '1a1a1a')
-  if (partnerName) embedUrl.searchParams.set('name', partnerName)
-  if (clientEmail) embedUrl.searchParams.set('email', clientEmail)
-
   return (
     <>
-      {/* Pre-wed FAQ modal */}
+      {/* FAQ modal */}
       {showFaq && (
         <div className="fixed inset-0 bg-black/40 flex items-start justify-center z-50 px-4 py-12 overflow-y-auto">
           <div className="bg-white rounded-2xl p-8 max-w-lg w-full shadow-xl">
@@ -103,30 +78,19 @@ export function PrewedShootCard({ shootAt, rescheduleUrl, partnerName, clientEma
         </div>
       )}
 
-      {/* Card */}
-      <div className="mb-6 bg-[#1a1a1a] text-white rounded-2xl overflow-hidden">
-        {isBooked ? (
-          /* ── Booked state ─────────────────────────────────────── */
-          <div className="p-6">
-            <div className="flex items-start gap-4">
-              <CalendarHeart size={20} className="shrink-0 mt-0.5 text-[#b5b8ba]" />
-              <div className="flex-1">
-                <p className="text-xs tracking-[0.12em] uppercase text-[#b5b8ba] mb-1">Pre-Wedding Shoot</p>
-                {shootAt ? (
-                  <>
-                    <p className="font-serif text-xl mb-1">Your shoot is confirmed</p>
-                    <p className="text-lg font-light mb-5">
-                      {formattedDate} at {formattedTime}
-                    </p>
-                  </>
-                ) : (
-                  <>
-                    <p className="font-serif text-xl mb-1">Booking confirmed!</p>
-                    <p className="text-sm text-[#b5b8ba] mb-5">
-                      Refresh in a moment and your date will appear here.
-                    </p>
-                  </>
-                )}
+      <div className="mb-6 bg-[#1a1a1a] text-white rounded-2xl p-6">
+        <div className="flex items-start gap-4">
+          <CalendarHeart size={20} className="shrink-0 mt-0.5 text-[#b5b8ba]" />
+          <div className="flex-1">
+            <p className="text-xs tracking-[0.12em] uppercase text-[#b5b8ba] mb-1">Pre-Wedding Shoot</p>
+
+            {shootAt ? (
+              /* Booked */
+              <>
+                <p className="font-serif text-xl mb-1">Your shoot is confirmed</p>
+                <p className="text-sm text-[#e8e4df] mb-5 font-light">
+                  {formattedDate} at {formattedTime}
+                </p>
                 <div className="flex flex-wrap gap-3">
                   <button
                     onClick={() => setShowFaq(true)}
@@ -145,36 +109,24 @@ export function PrewedShootCard({ shootAt, rescheduleUrl, partnerName, clientEma
                     </a>
                   )}
                 </div>
-              </div>
-            </div>
+              </>
+            ) : (
+              /* Not booked */
+              <>
+                <p className="font-serif text-xl mb-2">Book your pre-wedding shoot</p>
+                <p className="text-sm text-[#b5b8ba] mb-5">
+                  A relaxed shoot a few months before the big day — a great chance to get comfortable in front of the camera.
+                </p>
+                <Link
+                  href={`/portal/${slug}/pre-wed-shoot`}
+                  className="inline-block text-xs tracking-[0.1em] uppercase border border-white/40 px-4 py-2 hover:bg-white hover:text-[#535353] transition-colors"
+                >
+                  Book your shoot →
+                </Link>
+              </>
+            )}
           </div>
-        ) : (
-          /* ── Not booked — Calendly embed ──────────────────────── */
-          <>
-            <div className="p-6 pb-4">
-              <div className="flex items-start gap-4">
-                <CalendarHeart size={20} className="shrink-0 mt-0.5 text-[#b5b8ba]" />
-                <div>
-                  <p className="text-xs tracking-[0.12em] uppercase text-[#b5b8ba] mb-1">Included in your package</p>
-                  <p className="font-serif text-xl mb-1">Pre-Wedding Shoot</p>
-                  <p className="text-sm text-[#b5b8ba]">
-                    A relaxed shoot in the months before your wedding — a great chance to get comfortable in front of the camera before the big day.
-                  </p>
-                </div>
-              </div>
-            </div>
-            <div className="bg-[#faf9f7]">
-              <iframe
-                src={embedUrl.toString()}
-                width="100%"
-                height="660"
-                frameBorder="0"
-                title="Book your pre-wedding shoot"
-                className="block"
-              />
-            </div>
-          </>
-        )}
+        </div>
       </div>
     </>
   )
