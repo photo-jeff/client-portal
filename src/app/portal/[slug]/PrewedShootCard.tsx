@@ -1,3 +1,5 @@
+'use client'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { CalendarHeart } from 'lucide-react'
 
@@ -8,6 +10,16 @@ interface Props {
 }
 
 export function PrewedShootCard({ shootAt, rescheduleUrl, slug }: Props) {
+  const storageKey = `prewed-booked-${slug}`
+  const [optimisticBooked, setOptimisticBooked] = useState(false)
+
+  // Pick up the booking flag set by PrewedBookingWidget after the user books
+  useEffect(() => {
+    if (!shootAt && sessionStorage.getItem(storageKey) === 'true') {
+      setOptimisticBooked(true)
+    }
+  }, [shootAt, storageKey])
+
   // Format booked date/time in UK timezone
   let formattedDate = ''
   let formattedTime = ''
@@ -23,6 +35,8 @@ export function PrewedShootCard({ shootAt, rescheduleUrl, slug }: Props) {
     })
   }
 
+  const isBooked = !!shootAt || optimisticBooked
+
   return (
     <div className="mb-6 bg-[#1a1a1a] text-white rounded-2xl p-6">
         <div className="flex items-start gap-4">
@@ -30,13 +44,19 @@ export function PrewedShootCard({ shootAt, rescheduleUrl, slug }: Props) {
           <div className="flex-1">
             <p className="text-xs tracking-[0.12em] uppercase text-[#b5b8ba] mb-1">Pre-Wedding Shoot</p>
 
-            {shootAt ? (
-              /* Booked */
+            {isBooked ? (
+              /* Booked (or optimistic) */
               <>
                 <p className="font-serif text-xl mb-1">Your shoot is confirmed</p>
-                <p className="text-sm text-[#e8e4df] mb-5 font-light">
-                  {formattedDate} at {formattedTime}
-                </p>
+                {shootAt ? (
+                  <p className="text-sm text-[#e8e4df] mb-5 font-light">
+                    {formattedDate} at {formattedTime}
+                  </p>
+                ) : (
+                  <p className="text-sm text-[#b5b8ba] mb-5 font-light">
+                    Just a moment — confirming your date…
+                  </p>
+                )}
                 <div className="flex flex-wrap gap-3">
                   <Link
                     href={`/portal/${slug}/pre-wed-shoot/faq`}

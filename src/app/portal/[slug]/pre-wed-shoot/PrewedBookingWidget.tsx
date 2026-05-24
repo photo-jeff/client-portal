@@ -6,9 +6,10 @@ import Link from 'next/link'
 import { CheckCircle } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 
-const CALENDLY_URL = 'https://calendly.com/jeffoliverphoto/pre-wed-shoot'
-const POLL_INTERVAL = 3000   // check every 3s
-const POLL_MAX      = 20     // stop after 60s (20 × 3s)
+const CALENDLY_URL     = 'https://calendly.com/jeffoliverphoto/pre-wed-shoot'
+const POLL_INTERVAL    = 3000   // fast poll after booking: every 3s
+const POLL_MAX         = 20     // fast poll: stop after 60s (20 × 3s)
+const BG_POLL_INTERVAL = 8000   // background poll on mount: every 8s
 
 // Calendly widget type
 declare global {
@@ -37,10 +38,11 @@ export function PrewedBookingWidget({ shootAt, rescheduleUrl, partnerName, clien
   // Initialise from sessionStorage so the confirmed state survives a
   // router.refresh() (which can unmount/remount the client component).
   const [optimisticBooked, setOptimisticBooked] = useState(false)
-  const containerRef = useRef<HTMLDivElement>(null)
-  const pollCountRef = useRef(0)
-  const pollTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const router       = useRouter()
+  const containerRef  = useRef<HTMLDivElement>(null)
+  const pollCountRef  = useRef(0)
+  const pollTimerRef  = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const bgPollRef     = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const router        = useRouter()
 
   // On mount, restore any previously-set optimistic state
   useEffect(() => {
@@ -54,6 +56,7 @@ export function PrewedBookingWidget({ shootAt, rescheduleUrl, partnerName, clien
     if (shootAt) {
       sessionStorage.removeItem(storageKey)
       stopPolling()
+      stopBgPoll()
     }
   }, [shootAt, storageKey])
 
@@ -61,6 +64,13 @@ export function PrewedBookingWidget({ shootAt, rescheduleUrl, partnerName, clien
     if (pollTimerRef.current) {
       clearTimeout(pollTimerRef.current)
       pollTimerRef.current = null
+    }
+  }
+
+  function stopBgPoll() {
+    if (bgPollRef.current) {
+      clearTimeout(bgPollRef.current)
+      bgPollRef.current = null
     }
   }
 
@@ -90,6 +100,25 @@ export function PrewedBookingWidget({ shootAt, rescheduleUrl, partnerName, clien
     pollTimerRef.current = setTimeout(poll, 4000)
   }
 
+  // Background poll: runs from mount so we detect a booking even if
+  // the calendly.event_scheduled postMessage doesn't fire.
+  // Fires every 8s; when data arrives, sets optimistic state + triggers refresh.
+  function startBgPoll() {
+    async function bgPoll() {
+      try {
+        const res  = await fetch(`/api/portal/prewedding-check/${slug}`)
+        const { shootAt: liveShootAt } = await res.json()
+        if (liveShootAt) {
+          // Supabase has the real date — trigger a refresh to show it
+          router.refresh()
+          return
+        }
+      } catch { /* ignore */ }
+      bgPollRef.current = setTimeout(bgPoll, BG_POLL_INTERVAL)
+    }
+    bgPollRef.current = setTimeout(bgPoll, BG_POLL_INTERVAL)
+  }
+
   const embedUrl = `${CALENDLY_URL}?hide_gdpr_banner=1&background_color=faf9f7&text_color=1a1a1a&primary_color=1a1a1a`
 
   function initWidget() {
@@ -106,15 +135,20 @@ export function PrewedBookingWidget({ shootAt, rescheduleUrl, partnerName, clien
 
   useEffect(() => {
     if (window.Calendly) initWidget()
-    return () => stopPolling()
+    // Start background poll — fallback in case postMessage doesn't fire
+    if (!shootAt) startBgPoll()
+    return () => { stopPolling(); stopBgPoll() }
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Listen for booking-complete postMessage from the Calendly widget
   useEffect(() => {
     function handleMessage(e: MessageEvent) {
       if (e.data?.event === 'calendly.event_scheduled') {
+        // Immediately show confirmed state and store in sessionStorage
         sessionStorage.setItem(storageKey, 'true')
         setOptimisticBooked(true)
+        // Switch to fast polling to pick up Supabase write quickly
+        stopBgPoll()
         startPolling()
       }
     }
