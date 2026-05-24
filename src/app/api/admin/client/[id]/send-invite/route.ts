@@ -26,34 +26,30 @@ export async function POST(request: NextRequest, props: { params: Promise<{ id: 
   const firstName = client.partner1_name?.trim().split(/\s+/)[0] ?? 'there'
   const partnerNames = `${client.partner1_name} & ${client.partner2_name}`
 
-  // Use a Resend template if configured, otherwise fall back to inline HTML
-  const templateId = process.env.RESEND_INVITE_TEMPLATE_ID
-  const emailBody = templateId
-    ? {
-        template_id: templateId,
-        variables: {
-          first_name: firstName,
-          partner_names: partnerNames,
-          portal_url: portalUrl,
-        },
-      }
-    : {
-        html: `
-          <div style="font-family:Georgia,serif;max-width:560px;margin:0 auto;color:#1a1a1a;background:#faf9f7;padding:40px 32px">
-            <p style="font-size:13px;color:#888;letter-spacing:1px;text-transform:uppercase;margin:0 0 32px">Jeff Oliver Photography</p>
-            <h1 style="font-size:28px;font-weight:400;margin:0 0 16px;line-height:1.3">Your wedding portal is ready</h1>
-            <p style="font-size:15px;color:#555;line-height:1.7;margin:0 0 24px">Hi ${firstName},</p>
-            <p style="font-size:15px;color:#555;line-height:1.7;margin:0 0 32px">
-              Everything you need in the run-up to your wedding day is in one place — your timeline, questionnaire, shot list, invoice, and more.
-              It'll update as your day gets closer, so it's worth bookmarking.
-            </p>
-            <a href="${portalUrl}" style="display:inline-block;background:#1a1a1a;color:#fff;text-decoration:none;padding:14px 32px;font-family:sans-serif;font-size:12px;letter-spacing:2px;text-transform:uppercase">Open your portal →</a>
-            <p style="font-size:12px;color:#aaa;margin:24px 0 0;line-height:1.7">Or copy this link: <a href="${portalUrl}" style="color:#aaa">${portalUrl}</a></p>
-            <hr style="border:none;border-top:1px solid #e8e4df;margin:40px 0 24px" />
-            <p style="font-size:12px;color:#bbb;line-height:1.6">Jeff Oliver Photography · London &amp; Surrey Weddings</p>
-          </div>
-        `,
-      }
+  // ─── Email content ────────────────────────────────────────────────────────
+  const subject = `${partnerNames} — your wedding portal is ready`
+
+  const html = `
+    <div style="font-family:Georgia,serif;max-width:560px;margin:0 auto;color:#1a1a1a;background:#faf9f7;padding:40px 32px">
+      <p style="font-size:13px;color:#888;letter-spacing:1px;text-transform:uppercase;margin:0 0 32px">Jeff Oliver Photography</p>
+      <h1 style="font-size:28px;font-weight:400;margin:0 0 16px;line-height:1.3">Your wedding portal is ready</h1>
+      <p style="font-size:15px;color:#555;line-height:1.7;margin:0 0 24px">Hi ${firstName},</p>
+      <p style="font-size:15px;color:#555;line-height:1.7;margin:0 0 32px">
+        Everything you need in the run-up to your wedding day is in one place — your timeline,
+        questionnaire, shot list, invoice, and more. It'll update as your day gets closer,
+        so it's worth bookmarking.
+      </p>
+      <a href="${portalUrl}" style="display:inline-block;background:#1a1a1a;color:#fff;text-decoration:none;padding:14px 32px;font-family:sans-serif;font-size:12px;letter-spacing:2px;text-transform:uppercase">
+        Open your portal →
+      </a>
+      <p style="font-size:12px;color:#aaa;margin:24px 0 0;line-height:1.7">
+        Or copy this link: <a href="${portalUrl}" style="color:#aaa">${portalUrl}</a>
+      </p>
+      <hr style="border:none;border-top:1px solid #e8e4df;margin:40px 0 24px" />
+      <p style="font-size:12px;color:#bbb;line-height:1.6">Jeff Oliver Photography · London &amp; Surrey Weddings</p>
+    </div>
+  `
+  // ─────────────────────────────────────────────────────────────────────────
 
   const emailRes = await fetch('https://api.resend.com/emails', {
     method: 'POST',
@@ -64,8 +60,8 @@ export async function POST(request: NextRequest, props: { params: Promise<{ id: 
     body: JSON.stringify({
       from: 'Jeff Oliver Photography <hello@portal.jeffoliverphotography.com>',
       to: client.email,
-      subject: `${partnerNames} — your wedding portal is ready`,
-      ...emailBody,
+      subject,
+      html,
     }),
   })
 
