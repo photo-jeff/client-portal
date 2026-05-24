@@ -20,18 +20,29 @@ function Field({
   const [value, setValue] = useState(initial ?? '')
   const [saved, setSaved] = useState(false)
   const [saving, setSaving] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   async function save() {
     if (value === (initial ?? '')) return
     setSaving(true)
-    await fetch(`/api/admin/client/${clientId}`, {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ [field]: value.trim() || null }),
-    })
-    setSaving(false)
-    setSaved(true)
-    setTimeout(() => setSaved(false), 2000)
+    setSaved(false)
+    setError(null)
+    try {
+      const res = await fetch(`/api/admin/client/${clientId}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ [field]: value.trim() || null }),
+      })
+      const json = await res.json()
+      if (!res.ok) throw new Error(json.error || `Save failed (${res.status})`)
+      setSaved(true)
+      setTimeout(() => setSaved(false), 2000)
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Save failed')
+      setValue(initial ?? '') // revert to last known good value
+    } finally {
+      setSaving(false)
+    }
   }
 
   return (
@@ -41,7 +52,7 @@ function Field({
         <input
           type={type}
           value={value}
-          onChange={e => { setValue(e.target.value); setSaved(false) }}
+          onChange={e => { setValue(e.target.value); setSaved(false); setError(null) }}
           onBlur={save}
           onKeyDown={e => e.key === 'Enter' && save()}
           placeholder="—"
@@ -49,6 +60,7 @@ function Field({
         />
         {saving && <span className="text-xs text-[#aaa] shrink-0">Saving…</span>}
         {saved && <span className="text-xs text-green-600 shrink-0">Saved ✓</span>}
+        {error && <span className="text-xs text-red-500 shrink-0" title={error}>Failed — {error}</span>}
       </dd>
     </div>
   )
