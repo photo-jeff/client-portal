@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/Button'
 import { ClientIdFields } from './ClientIdFields'
 import { DeleteClientButton } from './DeleteClientButton'
 import { InviteButton } from './InviteButton'
+import { PrewedOverride } from './PrewedOverride'
 
 export default async function ClientDetailPage(props: { params: Promise<{ id: string }> }) {
   const { id } = await props.params
@@ -32,6 +33,16 @@ export default async function ClientDetailPage(props: { params: Promise<{ id: st
     .order('sort_order')
 
   const shotListText = (client as Record<string, unknown>).shot_list_text as string | null
+  const prewedOverride = (client as Record<string, unknown>).prewedding_override as string | null ?? null
+  const prewedShootAt  = (client as Record<string, unknown>).prewedding_shoot_at  as string | null ?? null
+  const isAlbumPackage = !!(client.package_name && (
+    client.package_name.toLowerCase().includes('album') ||
+    client.package_name.toLowerCase().includes('frame')
+  ))
+  const weddingDate  = client.wedding_date ? new Date(client.wedding_date) : null
+  const daysUntil    = weddingDate ? Math.ceil((weddingDate.getTime() - Date.now()) / 86400000) : null
+  const shootInPast  = prewedShootAt ? new Date(prewedShootAt) < new Date() : false
+  const isAutoEligible = daysUntil !== null && daysUntil > 0 && !shootInPast && (isAlbumPackage || !!prewedShootAt)
 
   return (
     <div className="min-h-screen" style={{ background: '#faf9f7' }}>
@@ -132,6 +143,21 @@ export default async function ClientDetailPage(props: { params: Promise<{ id: st
           ) : (
             <p className="mt-6 text-sm text-[#888]">Client hasn&apos;t completed their shot list yet.</p>
           )}
+        </section>
+
+        {/* Pre-Wedding Shoot */}
+        <section className="bg-white border border-[#e0ddd8] p-8 rounded-2xl">
+          <h2 className="font-serif text-xl mb-2">Pre-Wedding Shoot</h2>
+          <p className="text-xs text-[#aaa] mb-6">Override visibility or clear a booking so the client can rebook.</p>
+          <Divider />
+          <div className="mt-6">
+            <PrewedOverride
+              clientId={client.id}
+              override={prewedOverride}
+              shootAt={prewedShootAt}
+              isAutoEligible={isAutoEligible}
+            />
+          </div>
         </section>
 
         {/* Actions */}

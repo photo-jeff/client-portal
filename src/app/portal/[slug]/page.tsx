@@ -48,16 +48,20 @@ export default async function PortalDashboard({
     : null
 
   // Pre-wedding shoot visibility
-  // Show if: album package (or already has a booking), wedding is upcoming, and shoot hasn't happened yet
-  const isAlbumPackage = client.package_name &&
-    (client.package_name.toLowerCase().includes('album') ||
-     client.package_name.toLowerCase().includes('frame'))
-  const shootAt = (client as Record<string, unknown>).prewedding_shoot_at as string | null ?? null
-  const rescheduleUrl = (client as Record<string, unknown>).prewedding_reschedule_url as string | null ?? null
-  const shootInPast = shootAt ? new Date(shootAt) < new Date() : false
-  const showPrewedCard = daysUntil !== null && daysUntil > 0 &&
-    !shootInPast &&
-    (isAlbumPackage || !!shootAt)
+  const isAlbumPackage = !!(client.package_name && (
+    client.package_name.toLowerCase().includes('album') ||
+    client.package_name.toLowerCase().includes('frame')
+  ))
+  const shootAt        = (client as Record<string, unknown>).prewedding_shoot_at      as string | null ?? null
+  const rescheduleUrl  = (client as Record<string, unknown>).prewedding_reschedule_url as string | null ?? null
+  const prewedOverride = (client as Record<string, unknown>).prewedding_override       as string | null ?? null
+  const shootInPast    = shootAt ? new Date(shootAt) < new Date() : false
+  const datesOk        = daysUntil !== null && daysUntil > 0 && !shootInPast
+
+  const showPrewedCard =
+    prewedOverride === 'off' ? false :
+    prewedOverride === 'on'  ? datesOk :
+    datesOk && (isAlbumPackage || !!shootAt)
 
   // Timeline phase
   const isUrgent = daysUntil !== null && daysUntil > 0 && daysUntil <= 30
