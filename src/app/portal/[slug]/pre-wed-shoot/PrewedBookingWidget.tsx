@@ -7,6 +7,8 @@ import { CheckCircle } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 
 const CALENDLY_URL = 'https://calendly.com/jeffoliverphoto/pre-wed-shoot'
+const POLL_INTERVAL = 3000   // check every 3s
+const POLL_MAX      = 20     // stop after 60s (20 × 3s)
 
 // Calendly widget type
 declare global {
@@ -30,43 +32,95 @@ interface Props {
 }
 
 export function PrewedBookingWidget({ shootAt, rescheduleUrl, partnerName, clientEmail, slug }: Props) {
+  const storageKey = `prewed-booked-${slug}`
+
+  // Initialise from sessionStorage so the confirmed state survives a
+  // router.refresh() (which can unmount/remount the client component).
   const [optimisticBooked, setOptimisticBooked] = useState(false)
   const containerRef = useRef<HTMLDivElement>(null)
-  const router = useRouter()
+  const pollCountRef = useRef(0)
+  const pollTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const router       = useRouter()
+
+  // On mount, restore any previously-set optimistic state
+  useEffect(() => {
+    if (sessionStorage.getItem(storageKey) === 'true') {
+      setOptimisticBooked(true)
+    }
+  }, [storageKey])
+
+  // Once the server has real data, clear the optimistic flag
+  useEffect(() => {
+    if (shootAt) {
+      sessionStorage.removeItem(storageKey)
+      stopPolling()
+    }
+  }, [shootAt, storageKey])
+
+  function stopPolling() {
+    if (pollTimerRef.current) {
+      clearTimeout(pollTimerRef.current)
+      pollTimerRef.current = null
+    }
+  }
+
+  // Poll the lightweight API until Supabase has the shoot date,
+  // then do a single router.refresh() to show the real date.
+  function startPolling() {
+    pollCountRef.current = 0
+    stopPolling()
+
+    async function poll() {
+      try {
+        const res  = await fetch(`/api/portal/prewedding-check/${slug}`)
+        const { shootAt: liveShootAt } = await res.json()
+        if (liveShootAt) {
+          router.refresh()
+          return
+        }
+      } catch { /* ignore network errors */ }
+
+      pollCountRef.current++
+      if (pollCountRef.current < POLL_MAX) {
+        pollTimerRef.current = setTimeout(poll, POLL_INTERVAL)
+      }
+    }
+
+    // First check after 4s (give the webhook a head-start)
+    pollTimerRef.current = setTimeout(poll, 4000)
+  }
 
   const embedUrl = `${CALENDLY_URL}?hide_gdpr_banner=1&background_color=faf9f7&text_color=1a1a1a&primary_color=1a1a1a`
 
-  // Initialise the Calendly inline widget.
-  // Called both from onLoad (first visit) and from useEffect (script already cached).
   function initWidget() {
     if (!containerRef.current || !window.Calendly) return
     window.Calendly.initInlineWidget({
       url: embedUrl,
       parentElement: containerRef.current,
       prefill: {
-        name: partnerName || undefined,
+        name:  partnerName  || undefined,
         email: clientEmail || undefined,
       },
     })
   }
 
   useEffect(() => {
-    // Script may already be cached from a previous visit — init immediately
     if (window.Calendly) initWidget()
+    return () => stopPolling()
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Listen for the booking-complete postMessage from the widget
+  // Listen for booking-complete postMessage from the Calendly widget
   useEffect(() => {
     function handleMessage(e: MessageEvent) {
       if (e.data?.event === 'calendly.event_scheduled') {
+        sessionStorage.setItem(storageKey, 'true')
         setOptimisticBooked(true)
-        // Webhook writes to Supabase ~1–2s after booking; refresh after 5s
-        setTimeout(() => router.refresh(), 5000)
+        startPolling()
       }
     }
     window.addEventListener('message', handleMessage)
     return () => window.removeEventListener('message', handleMessage)
-  }, [router])
+  }, [router, slug, storageKey]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const isBooked = !!shootAt || optimisticBooked
 
@@ -106,7 +160,7 @@ export function PrewedBookingWidget({ shootAt, rescheduleUrl, partnerName, clien
             </p>
           ) : (
             <p className="text-sm text-[#919295]">
-              Refresh this page in a moment and your date will appear here.
+              Just a moment — confirming your date…
             </p>
           )}
           <div className="flex justify-center gap-3 pt-2">
