@@ -3,7 +3,7 @@ import { SectionCard } from '@/components/portal/SectionCard'
 import { Divider } from '@/components/ui/Divider'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
-import { CalendarHeart } from 'lucide-react'
+import { PrewedShootCard } from './PrewedShootCard'
 
 export default async function PortalDashboard({
   params,
@@ -45,10 +45,17 @@ export default async function PortalDashboard({
     ? Math.ceil((new Date(client.wedding_date).getTime() - Date.now()) / 86400000)
     : null
 
-  // Is this an album package? If so, show pre-wed shoot card
+  // Pre-wedding shoot visibility
+  // Show if: album package (or already has a booking), wedding is upcoming, and shoot hasn't happened yet
   const isAlbumPackage = client.package_name &&
     (client.package_name.toLowerCase().includes('album') ||
      client.package_name.toLowerCase().includes('frame'))
+  const shootAt = (client as Record<string, unknown>).prewedding_shoot_at as string | null ?? null
+  const rescheduleUrl = (client as Record<string, unknown>).prewedding_reschedule_url as string | null ?? null
+  const shootInPast = shootAt ? new Date(shootAt) < new Date() : false
+  const showPrewedCard = daysUntil !== null && daysUntil > 0 &&
+    !shootInPast &&
+    (isAlbumPackage || !!shootAt)
 
   // Timeline phase
   const isUrgent = daysUntil !== null && daysUntil > 0 && daysUntil <= 30
@@ -79,26 +86,14 @@ export default async function PortalDashboard({
         )}
       </div>
 
-      {/* Pre-wedding shoot banner */}
-      {isAlbumPackage && daysUntil !== null && daysUntil > 0 && (
-        <div className="mb-6 bg-[#1a1a1a] text-white p-6 flex items-start gap-4 rounded-2xl">
-          <CalendarHeart size={20} className="shrink-0 mt-0.5 text-[#b5b8ba]" />
-          <div>
-            <p className="text-xs tracking-[0.12em] uppercase text-[#b5b8ba] mb-1">Your {client.package_name} includes</p>
-            <p className="font-serif text-lg mb-2">Pre-Wedding Shoot</p>
-            <p className="text-sm text-[#b5b8ba] mb-4">
-              A relaxed shoot in the months before your wedding — a chance to get comfortable in front of the camera before the big day.
-            </p>
-            <a
-              href="https://calendly.com/jeffoliverphoto/pre-wed-shoot"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-block text-xs tracking-[0.1em] uppercase border border-white/40 px-4 py-2 hover:bg-white hover:text-[#535353] transition-colors"
-            >
-              Book your shoot →
-            </a>
-          </div>
-        </div>
+      {/* Pre-wedding shoot */}
+      {showPrewedCard && (
+        <PrewedShootCard
+          shootAt={shootAt}
+          rescheduleUrl={rescheduleUrl}
+          partnerName={client.partner1_name ?? ''}
+          clientEmail={client.email ?? null}
+        />
       )}
 
       {/* Sections */}
