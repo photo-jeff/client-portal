@@ -30,8 +30,11 @@ export default async function AdminPage() {
             <Link href="/admin/archive">
               <Button variant="outline" size="sm">Archive</Button>
             </Link>
+            <Link href="/admin/email-settings">
+              <Button variant="outline" size="sm">Email</Button>
+            </Link>
             <Link href="/admin/faq">
-              <Button variant="outline" size="sm">Edit FAQ</Button>
+              <Button variant="outline" size="sm">FAQ</Button>
             </Link>
             <Link href="/admin/clients/new">
               <Button variant="outline" size="sm">New portal</Button>
