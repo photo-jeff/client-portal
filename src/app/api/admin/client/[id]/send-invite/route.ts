@@ -62,7 +62,7 @@ export async function POST(request: NextRequest, props: { params: Promise<{ id: 
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
-      from: 'Jeff Oliver Photography <hello@updates.jeffoliverphotography.com>',
+      from: 'Jeff Oliver Photography <hello@portal.jeffoliverphotography.com>',
       to: client.email,
       subject: `${partnerNames} — your wedding portal is ready`,
       html,
