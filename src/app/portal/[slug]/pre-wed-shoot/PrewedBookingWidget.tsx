@@ -1,5 +1,6 @@
 'use client'
 import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { CheckCircle, X } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 
@@ -38,17 +39,24 @@ interface Props {
 export function PrewedBookingWidget({ shootAt, rescheduleUrl, partnerName, clientEmail }: Props) {
   const [showFaq, setShowFaq] = useState(false)
   const [optimisticBooked, setOptimisticBooked] = useState(false)
+  const router = useRouter()
 
-  // Listen for Calendly booking completion within the iframe
+  // Listen for Calendly booking completion within the iframe.
+  // After detecting the booking, refresh server data a few seconds later
+  // so the webhook has time to write to Supabase — after that, shootAt
+  // will be set and the confirmed state survives navigation.
   useEffect(() => {
     function handleMessage(e: MessageEvent) {
-      if (e.data?.event === 'calendly.event_scheduled') {
+      const evt = e.data?.event ?? e.data
+      if (evt === 'calendly.event_scheduled' || (typeof evt === 'string' && evt.includes('event_scheduled'))) {
         setOptimisticBooked(true)
+        // Webhook typically fires within 1–2s; refresh after 5s to be safe
+        setTimeout(() => router.refresh(), 5000)
       }
     }
     window.addEventListener('message', handleMessage)
     return () => window.removeEventListener('message', handleMessage)
-  }, [])
+  }, [router])
 
   const isBooked = !!shootAt || optimisticBooked
 
@@ -68,6 +76,7 @@ export function PrewedBookingWidget({ shootAt, rescheduleUrl, partnerName, clien
 
   // Build Calendly embed URL with pre-fill and matching colours
   const embedUrl = new URL(CALENDLY_URL)
+  embedUrl.searchParams.set('embed_type', 'Inline')
   embedUrl.searchParams.set('hide_gdpr_banner', '1')
   embedUrl.searchParams.set('background_color', 'faf9f7')
   embedUrl.searchParams.set('text_color', '1a1a1a')

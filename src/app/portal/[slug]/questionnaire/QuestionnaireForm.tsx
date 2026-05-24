@@ -52,10 +52,15 @@ function Drum({ items, value, onChange }: { items: string[]; value: string; onCh
 
   return (
     <div className="relative" style={{ width: 72, height: ITEM_H * 5 }}>
-      {/* Selection highlight — sits behind the center row */}
+      {/* Selection indicator — border lines only, no fill, so digits show through */}
       <div
-        className="absolute inset-x-1 pointer-events-none z-10 bg-[#f0ede8] rounded-lg"
-        style={{ top: ITEM_H * 2, height: ITEM_H }}
+        className="absolute inset-x-2 pointer-events-none"
+        style={{
+          top: ITEM_H * 2,
+          height: ITEM_H,
+          borderTop: '1px solid #c8c4be',
+          borderBottom: '1px solid #c8c4be',
+        }}
       />
       <div
         ref={listRef}
@@ -72,7 +77,9 @@ function Drum({ items, value, onChange }: { items: string[]; value: string; onCh
           <div
             key={item}
             style={{ scrollSnapAlign: 'center' as const, height: ITEM_H }}
-            className="flex items-center justify-center text-base font-medium text-[#535353] select-none"
+            className={`flex items-center justify-center text-base select-none transition-colors ${
+              item === value ? 'font-semibold text-[#1a1a1a]' : 'text-[#c2c5c8]'
+            }`}
           >
             {item}
           </div>
