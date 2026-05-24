@@ -6,6 +6,7 @@ import { Divider } from '@/components/ui/Divider'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { PrewedShootCard } from './PrewedShootCard'
+import { InvoiceCard } from './InvoiceCard'
 
 export default async function PortalDashboard({
   params,
@@ -132,9 +133,9 @@ export default async function PortalDashboard({
           required={isClose && !shotListComplete}
           urgent={isUrgent && !shotListComplete}
         />
-        <SectionCard
-          title="Invoices"
-          description="Your deposit and balance information."
+        <InvoiceCard
+          slug={slug}
+          daysUntil={daysUntil}
           href={`/portal/${slug}/invoices`}
         />
         <SectionCard
