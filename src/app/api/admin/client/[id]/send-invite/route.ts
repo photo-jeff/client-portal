@@ -52,7 +52,7 @@ export async function POST(request: NextRequest, props: { params: Promise<{ id: 
         Or copy this link: <a href="${portalUrl}" style="color:#aaa">${portalUrl}</a>
       </p>
       <hr style="border:none;border-top:1px solid #e8e4df;margin:40px 0 24px" />
-      <p style="font-size:12px;color:#bbb;line-height:1.6">Jeff Oliver Photography · London &amp; Surrey Weddings</p>
+      <p style="font-size:12px;color:#bbb;line-height:1.6">Jeff Oliver Photography</p>
     </div>
   `
 
