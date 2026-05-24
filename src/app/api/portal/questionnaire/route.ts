@@ -35,7 +35,7 @@ async function sendEmail(partnerNames: string, slug: string, data: Record<string
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
-      from: 'portal@jeffoliverphotography.com',
+      from: 'Jeff Oliver Photography <hello@updates.jeffoliverphotography.com>',
       to: 'mrjeffoliver@gmail.com',
       subject: `Questionnaire submitted — ${partnerNames}`,
       html,
