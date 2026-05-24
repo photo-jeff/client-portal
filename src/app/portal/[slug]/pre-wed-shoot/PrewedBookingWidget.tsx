@@ -1,6 +1,7 @@
 'use client'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
+import Script from 'next/script'
 import { CheckCircle, X } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 
@@ -29,6 +30,19 @@ const FAQ = [
   },
 ]
 
+// Calendly widget type
+declare global {
+  interface Window {
+    Calendly?: {
+      initInlineWidget: (opts: {
+        url: string
+        parentElement: HTMLElement
+        prefill?: { name?: string; email?: string }
+      }) => void
+    }
+  }
+}
+
 interface Props {
   shootAt: string | null
   rescheduleUrl: string | null
@@ -39,18 +53,36 @@ interface Props {
 export function PrewedBookingWidget({ shootAt, rescheduleUrl, partnerName, clientEmail }: Props) {
   const [showFaq, setShowFaq] = useState(false)
   const [optimisticBooked, setOptimisticBooked] = useState(false)
+  const containerRef = useRef<HTMLDivElement>(null)
   const router = useRouter()
 
-  // Listen for Calendly booking completion within the iframe.
-  // After detecting the booking, refresh server data a few seconds later
-  // so the webhook has time to write to Supabase — after that, shootAt
-  // will be set and the confirmed state survives navigation.
+  const embedUrl = `${CALENDLY_URL}?hide_gdpr_banner=1&background_color=faf9f7&text_color=1a1a1a&primary_color=1a1a1a`
+
+  // Initialise the Calendly inline widget.
+  // Called both from onLoad (first visit) and from useEffect (script already cached).
+  function initWidget() {
+    if (!containerRef.current || !window.Calendly) return
+    window.Calendly.initInlineWidget({
+      url: embedUrl,
+      parentElement: containerRef.current,
+      prefill: {
+        name: partnerName || undefined,
+        email: clientEmail || undefined,
+      },
+    })
+  }
+
+  useEffect(() => {
+    // Script may already be cached from a previous visit — init immediately
+    if (window.Calendly) initWidget()
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Listen for the booking-complete postMessage from the widget
   useEffect(() => {
     function handleMessage(e: MessageEvent) {
-      const evt = e.data?.event ?? e.data
-      if (evt === 'calendly.event_scheduled' || (typeof evt === 'string' && evt.includes('event_scheduled'))) {
+      if (e.data?.event === 'calendly.event_scheduled') {
         setOptimisticBooked(true)
-        // Webhook typically fires within 1–2s; refresh after 5s to be safe
+        // Webhook writes to Supabase ~1–2s after booking; refresh after 5s
         setTimeout(() => router.refresh(), 5000)
       }
     }
@@ -74,18 +106,15 @@ export function PrewedBookingWidget({ shootAt, rescheduleUrl, partnerName, clien
     })
   }
 
-  // Build Calendly embed URL with pre-fill and matching colours
-  const embedUrl = new URL(CALENDLY_URL)
-  embedUrl.searchParams.set('embed_type', 'Inline')
-  embedUrl.searchParams.set('hide_gdpr_banner', '1')
-  embedUrl.searchParams.set('background_color', 'faf9f7')
-  embedUrl.searchParams.set('text_color', '1a1a1a')
-  embedUrl.searchParams.set('primary_color', '1a1a1a')
-  if (partnerName) embedUrl.searchParams.set('name', partnerName)
-  if (clientEmail) embedUrl.searchParams.set('email', clientEmail)
-
   return (
     <>
+      {/* Calendly widget JS — loads once, enables postMessage */}
+      <Script
+        src="https://assets.calendly.com/assets/external/widget.js"
+        strategy="lazyOnload"
+        onLoad={initWidget}
+      />
+
       {/* FAQ modal */}
       {showFaq && (
         <div className="fixed inset-0 bg-black/40 flex items-start justify-center z-50 px-4 py-12 overflow-y-auto">
@@ -130,27 +159,16 @@ export function PrewedBookingWidget({ shootAt, rescheduleUrl, partnerName, clien
           <div className="flex justify-center gap-3 pt-2">
             <Button variant="outline" size="sm" onClick={() => setShowFaq(true)}>FAQ</Button>
             {rescheduleUrl && (
-              <a
-                href={rescheduleUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-              >
+              <a href={rescheduleUrl} target="_blank" rel="noopener noreferrer">
                 <Button variant="outline" size="sm">Reschedule</Button>
               </a>
             )}
           </div>
         </div>
       ) : (
-        /* Booking embed */
+        /* Booking widget */
         <div className="bg-[#faf9f7] border border-[#e0ddd8] rounded-2xl overflow-hidden">
-          <iframe
-            src={embedUrl.toString()}
-            width="100%"
-            height="700"
-            frameBorder="0"
-            title="Book your pre-wedding shoot"
-            className="block"
-          />
+          <div ref={containerRef} style={{ minWidth: 320, height: 700 }} />
         </div>
       )}
     </>
