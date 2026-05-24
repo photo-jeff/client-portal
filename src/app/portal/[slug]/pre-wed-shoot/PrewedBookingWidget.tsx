@@ -7,9 +7,10 @@ import { CheckCircle } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 
 const CALENDLY_URL     = 'https://calendly.com/jeffoliverphoto/pre-wed-shoot'
-const POLL_INTERVAL    = 3000   // fast poll after booking: every 3s
-const POLL_MAX         = 20     // fast poll: stop after 60s (20 × 3s)
-const BG_POLL_INTERVAL = 8000   // background poll on mount: every 8s
+const POLL_INTERVAL    = 3000        // fast poll after booking: every 3s
+const POLL_MAX         = 20          // fast poll: stop after 60s (20 × 3s)
+const BG_POLL_INTERVAL = 8000        // background poll on mount: every 8s
+const MAX_WAIT_MS      = 10 * 60 * 1000  // give up optimistic state after 10 min
 
 // Calendly widget type
 declare global {
@@ -32,11 +33,19 @@ interface Props {
   slug: string
 }
 
+/** Read sessionStorage and return true only if the booking timestamp is recent */
+function hasRecentBooking(key: string): boolean {
+  const val = sessionStorage.getItem(key)
+  if (!val) return false
+  const ts = parseInt(val, 10)
+  if (isNaN(ts)) { sessionStorage.removeItem(key); return false }   // old 'true' format
+  if (Date.now() - ts > MAX_WAIT_MS) { sessionStorage.removeItem(key); return false }
+  return true
+}
+
 export function PrewedBookingWidget({ shootAt, rescheduleUrl, partnerName, clientEmail, slug }: Props) {
   const storageKey = `prewed-booked-${slug}`
 
-  // Initialise from sessionStorage so the confirmed state survives a
-  // router.refresh() (which can unmount/remount the client component).
   const [optimisticBooked, setOptimisticBooked] = useState(false)
   const containerRef  = useRef<HTMLDivElement>(null)
   const pollCountRef  = useRef(0)
@@ -44,14 +53,14 @@ export function PrewedBookingWidget({ shootAt, rescheduleUrl, partnerName, clien
   const bgPollRef     = useRef<ReturnType<typeof setTimeout> | null>(null)
   const router        = useRouter()
 
-  // On mount, restore any previously-set optimistic state
+  // On mount, restore recent optimistic state (timestamp-based, not plain 'true')
   useEffect(() => {
-    if (sessionStorage.getItem(storageKey) === 'true') {
+    if (hasRecentBooking(storageKey)) {
       setOptimisticBooked(true)
     }
   }, [storageKey])
 
-  // Once the server has real data, clear the optimistic flag
+  // Once the server has real data, clear everything
   useEffect(() => {
     if (shootAt) {
       sessionStorage.removeItem(storageKey)
@@ -61,34 +70,28 @@ export function PrewedBookingWidget({ shootAt, rescheduleUrl, partnerName, clien
   }, [shootAt, storageKey])
 
   function stopPolling() {
-    if (pollTimerRef.current) {
-      clearTimeout(pollTimerRef.current)
-      pollTimerRef.current = null
-    }
+    if (pollTimerRef.current) { clearTimeout(pollTimerRef.current); pollTimerRef.current = null }
   }
-
   function stopBgPoll() {
-    if (bgPollRef.current) {
-      clearTimeout(bgPollRef.current)
-      bgPollRef.current = null
-    }
+    if (bgPollRef.current) { clearTimeout(bgPollRef.current); bgPollRef.current = null }
   }
 
-  // Poll the lightweight API until Supabase has the shoot date,
-  // then do a single router.refresh() to show the real date.
+  // Fast poll (after postMessage) — checks every 3s for up to 60s
   function startPolling() {
     pollCountRef.current = 0
     stopPolling()
 
     async function poll() {
+      // Check if optimistic state has expired
+      if (!hasRecentBooking(storageKey)) {
+        setOptimisticBooked(false)
+        return
+      }
       try {
-        const res  = await fetch(`/api/portal/prewedding-check/${slug}`)
+        const res = await fetch(`/api/portal/prewedding-check/${slug}`)
         const { shootAt: liveShootAt } = await res.json()
-        if (liveShootAt) {
-          router.refresh()
-          return
-        }
-      } catch { /* ignore network errors */ }
+        if (liveShootAt) { router.refresh(); return }
+      } catch { /* ignore */ }
 
       pollCountRef.current++
       if (pollCountRef.current < POLL_MAX) {
@@ -96,23 +99,22 @@ export function PrewedBookingWidget({ shootAt, rescheduleUrl, partnerName, clien
       }
     }
 
-    // First check after 4s (give the webhook a head-start)
     pollTimerRef.current = setTimeout(poll, 4000)
   }
 
-  // Background poll: runs from mount so we detect a booking even if
-  // the calendly.event_scheduled postMessage doesn't fire.
-  // Fires every 8s; when data arrives, sets optimistic state + triggers refresh.
+  // Background poll — runs from mount as fallback (every 8s, indefinite until data or expiry)
   function startBgPoll() {
     async function bgPoll() {
+      // Stop if real data arrived or optimistic state expired
+      if (shootAt) return
+      if (!hasRecentBooking(storageKey)) {
+        setOptimisticBooked(false)
+        return
+      }
       try {
-        const res  = await fetch(`/api/portal/prewedding-check/${slug}`)
+        const res = await fetch(`/api/portal/prewedding-check/${slug}`)
         const { shootAt: liveShootAt } = await res.json()
-        if (liveShootAt) {
-          // Supabase has the real date — trigger a refresh to show it
-          router.refresh()
-          return
-        }
+        if (liveShootAt) { router.refresh(); return }
       } catch { /* ignore */ }
       bgPollRef.current = setTimeout(bgPoll, BG_POLL_INTERVAL)
     }
@@ -127,7 +129,7 @@ export function PrewedBookingWidget({ shootAt, rescheduleUrl, partnerName, clien
       url: embedUrl,
       parentElement: containerRef.current,
       prefill: {
-        name:  partnerName  || undefined,
+        name:  partnerName || undefined,
         email: clientEmail || undefined,
       },
     })
@@ -135,7 +137,6 @@ export function PrewedBookingWidget({ shootAt, rescheduleUrl, partnerName, clien
 
   useEffect(() => {
     if (window.Calendly) initWidget()
-    // Start background poll — fallback in case postMessage doesn't fire
     if (!shootAt) startBgPoll()
     return () => { stopPolling(); stopBgPoll() }
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
@@ -144,10 +145,8 @@ export function PrewedBookingWidget({ shootAt, rescheduleUrl, partnerName, clien
   useEffect(() => {
     function handleMessage(e: MessageEvent) {
       if (e.data?.event === 'calendly.event_scheduled') {
-        // Immediately show confirmed state and store in sessionStorage
-        sessionStorage.setItem(storageKey, 'true')
+        sessionStorage.setItem(storageKey, String(Date.now()))  // store timestamp
         setOptimisticBooked(true)
-        // Switch to fast polling to pick up Supabase write quickly
         stopBgPoll()
         startPolling()
       }
@@ -174,7 +173,6 @@ export function PrewedBookingWidget({ shootAt, rescheduleUrl, partnerName, clien
 
   return (
     <>
-      {/* Calendly widget JS — loads once, enables postMessage */}
       <Script
         src="https://assets.calendly.com/assets/external/widget.js"
         strategy="lazyOnload"
@@ -182,7 +180,6 @@ export function PrewedBookingWidget({ shootAt, rescheduleUrl, partnerName, clien
       />
 
       {isBooked ? (
-        /* Confirmed state */
         <div className="bg-white border border-[#e0ddd8] rounded-2xl p-10 text-center space-y-4">
           <CheckCircle size={32} className="mx-auto text-[#535353]" />
           <h2 className="font-serif text-2xl">
@@ -209,7 +206,6 @@ export function PrewedBookingWidget({ shootAt, rescheduleUrl, partnerName, clien
           </div>
         </div>
       ) : (
-        /* Booking widget */
         <div className="bg-[#faf9f7] border border-[#e0ddd8] rounded-2xl overflow-hidden">
           <div ref={containerRef} style={{ minWidth: 320, height: 700 }} />
         </div>

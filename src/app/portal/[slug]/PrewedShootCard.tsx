@@ -4,10 +4,21 @@ import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { CalendarHeart } from 'lucide-react'
 
+const MAX_WAIT_MS = 10 * 60 * 1000  // clear optimistic state after 10 min
+
 interface Props {
   shootAt: string | null
   rescheduleUrl: string | null
   slug: string
+}
+
+function hasRecentBooking(key: string): boolean {
+  const val = sessionStorage.getItem(key)
+  if (!val) return false
+  const ts = parseInt(val, 10)
+  if (isNaN(ts)) { sessionStorage.removeItem(key); return false }   // old 'true' format
+  if (Date.now() - ts > MAX_WAIT_MS) { sessionStorage.removeItem(key); return false }
+  return true
 }
 
 export function PrewedShootCard({ shootAt, rescheduleUrl, slug }: Props) {
@@ -16,24 +27,27 @@ export function PrewedShootCard({ shootAt, rescheduleUrl, slug }: Props) {
   const pollRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const router  = useRouter()
 
-  // Pick up the booking flag set by PrewedBookingWidget after the user books
+  // Pick up a recent booking set by PrewedBookingWidget
   useEffect(() => {
-    if (!shootAt && sessionStorage.getItem(storageKey) === 'true') {
+    if (!shootAt && hasRecentBooking(storageKey)) {
       setOptimisticBooked(true)
     }
   }, [shootAt, storageKey])
 
-  // When in optimistic state and Supabase doesn't have the date yet,
-  // poll every 8s so the dashboard auto-updates when the webhook fires.
+  // When in optimistic state, poll every 8s so the card auto-updates when
+  // the webhook writes the real date to Supabase.
   useEffect(() => {
-    if (shootAt || !optimisticBooked) return  // nothing to do
+    if (shootAt || !optimisticBooked) return
 
     async function poll() {
+      if (!hasRecentBooking(storageKey)) {
+        setOptimisticBooked(false)
+        return
+      }
       try {
         const res = await fetch(`/api/portal/prewedding-check/${slug}`)
         const { shootAt: live } = await res.json()
         if (live) {
-          // Real data arrived — refresh the server component to show the date
           sessionStorage.removeItem(storageKey)
           router.refresh()
           return
@@ -71,7 +85,6 @@ export function PrewedShootCard({ shootAt, rescheduleUrl, slug }: Props) {
             <p className="text-xs tracking-[0.12em] uppercase text-[#b5b8ba] mb-1">Pre-Wedding Shoot</p>
 
             {isBooked ? (
-              /* Booked (or optimistic) */
               <>
                 <p className="font-serif text-xl mb-1">Your shoot is confirmed</p>
                 {shootAt ? (
@@ -103,7 +116,6 @@ export function PrewedShootCard({ shootAt, rescheduleUrl, slug }: Props) {
                 </div>
               </>
             ) : (
-              /* Not booked */
               <>
                 <p className="font-serif text-xl mb-2">Book your pre-wedding shoot</p>
                 <p className="text-sm text-[#b5b8ba] mb-5">
