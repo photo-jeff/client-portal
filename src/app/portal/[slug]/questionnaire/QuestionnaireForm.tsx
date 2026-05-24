@@ -1,5 +1,5 @@
 'use client'
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { Button } from '@/components/ui/Button'
 import { Input, Textarea } from '@/components/ui/Input'
 import { calculatePhotographerTimings, formatDisplayTime } from '@/lib/time-utils'
@@ -24,40 +24,162 @@ function firstName(fullName: string): string {
   return fullName.trim().split(/\s+/)[0] || fullName
 }
 
+// ── iOS-style drum scroll column ────────────────────────────────────────────
+
+const ITEM_H = 44
+
+function Drum({ items, value, onChange }: { items: string[]; value: string; onChange: (v: string) => void }) {
+  const listRef = useRef<HTMLDivElement>(null)
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  // Scroll to the right position whenever the drum mounts (picker opens)
+  useEffect(() => {
+    const idx = items.indexOf(value)
+    if (listRef.current && idx >= 0) {
+      listRef.current.scrollTop = idx * ITEM_H
+    }
+  }, []) // eslint-disable-line react-hooks/exhaustive-deps
+
+  function handleScroll() {
+    if (timerRef.current) clearTimeout(timerRef.current)
+    timerRef.current = setTimeout(() => {
+      if (!listRef.current) return
+      const idx = Math.round(listRef.current.scrollTop / ITEM_H)
+      const clamped = Math.max(0, Math.min(idx, items.length - 1))
+      onChange(items[clamped])
+    }, 120)
+  }
+
+  return (
+    <div className="relative" style={{ width: 72, height: ITEM_H * 5 }}>
+      {/* Selection highlight */}
+      <div
+        className="absolute inset-x-2 pointer-events-none z-10 rounded-lg bg-[#f0ede8]"
+        style={{ top: ITEM_H * 2, height: ITEM_H }}
+      />
+      {/* Top fade */}
+      <div
+        className="absolute inset-x-0 top-0 pointer-events-none z-20 bg-gradient-to-b from-white to-transparent"
+        style={{ height: ITEM_H * 2 }}
+      />
+      {/* Bottom fade */}
+      <div
+        className="absolute inset-x-0 bottom-0 pointer-events-none z-20 bg-gradient-to-t from-white to-transparent"
+        style={{ height: ITEM_H * 2 }}
+      />
+      <div
+        ref={listRef}
+        onScroll={handleScroll}
+        className="h-full overflow-y-scroll [&::-webkit-scrollbar]:hidden"
+        style={{
+          scrollSnapType: 'y mandatory' as const,
+          paddingTop: ITEM_H * 2,
+          paddingBottom: ITEM_H * 2,
+          scrollbarWidth: 'none' as const,
+        }}
+      >
+        {items.map(item => (
+          <div
+            key={item}
+            style={{ scrollSnapAlign: 'start' as const, height: ITEM_H }}
+            className="flex items-center justify-center text-base font-medium text-[#535353] select-none"
+          >
+            {item}
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+// ── Time picker field ────────────────────────────────────────────────────────
+
+const HOURS = Array.from({ length: 24 }, (_, i) => String(i).padStart(2, '0'))
+const MINUTES = ['00', '15', '30', '45']
+
+function nearestQuarter(m: number) {
+  return String(Math.round(m / 15) * 15 % 60).padStart(2, '0')
+}
+
 function TimeSelect({
-  label,
-  value,
-  onChange,
-  hint,
+  label, value, onChange, hint,
 }: {
   label: string
   value: string
   onChange: (v: string) => void
   hint?: string
 }) {
-  const times: string[] = []
-  for (let h = 0; h < 24; h++) {
-    for (const m of [0, 15, 30, 45]) {
-      times.push(`${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`)
+  const [open, setOpen] = useState(false)
+  const [localHour, setLocalHour] = useState(() => value ? value.split(':')[0] : '12')
+  const [localMin, setLocalMin] = useState(() => value ? nearestQuarter(parseInt(value.split(':')[1])) : '00')
+
+  // Keep local state in sync if value is updated externally (e.g. pre-fill on load)
+  useEffect(() => {
+    if (value) {
+      setLocalHour(value.split(':')[0])
+      setLocalMin(nearestQuarter(parseInt(value.split(':')[1])))
+    } else {
+      setLocalHour('12')
+      setLocalMin('00')
     }
+  }, [value])
+
+  function handleDone() {
+    onChange(`${localHour}:${localMin}`)
+    setOpen(false)
   }
+
+  function handleClear() {
+    onChange('')
+    setOpen(false)
+  }
+
   return (
-    <div className="flex flex-col h-full space-y-1">
+    <div className="space-y-1">
       <label className="block text-xs tracking-[0.1em] uppercase text-[#919295] font-medium">{label}</label>
       {hint && <p className="text-xs text-[#b5b8ba]">{hint}</p>}
-      <select
-        value={value}
-        onChange={e => onChange(e.target.value)}
-        className="mt-auto w-full border border-[#e0ddd8] bg-white px-4 py-3 text-sm text-[#535353] focus:outline-none focus:border-[#535353] transition-colors rounded-lg"
-      >
-        <option value="">—</option>
-        {times.map(t => (
-          <option key={t} value={t}>{t}</option>
-        ))}
-      </select>
+
+      {!open ? (
+        <button
+          type="button"
+          onClick={() => setOpen(true)}
+          className="w-full text-left border border-[#e0ddd8] bg-white px-4 py-3 text-sm rounded-lg transition-colors hover:border-[#919295]"
+        >
+          {value
+            ? <span className="text-[#535353]">{value}</span>
+            : <span className="text-[#c2c5c8]">—</span>
+          }
+        </button>
+      ) : (
+        <div className="border border-[#535353] rounded-xl overflow-hidden">
+          <div className="flex items-center justify-center gap-1 py-2 bg-white">
+            <Drum items={HOURS} value={localHour} onChange={setLocalHour} />
+            <span className="text-xl font-light text-[#535353] pb-0.5">:</span>
+            <Drum items={MINUTES} value={localMin} onChange={setLocalMin} />
+          </div>
+          <div className="flex border-t border-[#e0ddd8]">
+            <button
+              type="button"
+              onClick={handleClear}
+              className="flex-1 py-3 text-xs text-[#919295] hover:text-[#535353] transition-colors border-r border-[#e0ddd8]"
+            >
+              Clear
+            </button>
+            <button
+              type="button"
+              onClick={handleDone}
+              className="flex-1 py-3 text-xs font-medium text-[#535353] hover:bg-[#faf9f7] transition-colors"
+            >
+              Done
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
+
+// ── Main form ────────────────────────────────────────────────────────────────
 
 export function QuestionnaireForm({
   clientId, slug, partner1, partner2,
@@ -251,7 +373,7 @@ export function QuestionnaireForm({
                   placeholder="Full address including postcode"
                   hint={ceremonyVenue ? 'Pre-filled from your booking — update if needed' : undefined}
                 />
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-2 gap-4 items-end">
                   <TimeSelect
                     label="Ceremony start time"
                     value={data.ceremony_time as string}
