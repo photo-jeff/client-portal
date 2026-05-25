@@ -1,10 +1,9 @@
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { redirect } from 'next/navigation'
-import Link from 'next/link'
 import { Divider } from '@/components/ui/Divider'
-import { Button } from '@/components/ui/Button'
 import { AdminClientList } from './AdminClientList'
+import { AdminNavMenu } from './AdminNavMenu'
 
 export default async function AdminPage() {
   const supabase = await createClient()
@@ -26,23 +25,7 @@ export default async function AdminPage() {
       <header className="bg-white border-b border-[#e0ddd8]">
         <div className="max-w-5xl mx-auto px-6 py-5 flex items-center justify-between">
           <h1 className="font-serif text-xl">Jeff Oliver Photography — Admin</h1>
-          <div className="flex items-center gap-3">
-            <Link href="/admin/archive">
-              <Button variant="outline" size="sm">Archive</Button>
-            </Link>
-            <Link href="/admin/email-settings">
-              <Button variant="outline" size="sm">Email</Button>
-            </Link>
-            <Link href="/admin/faq">
-              <Button variant="outline" size="sm">FAQ</Button>
-            </Link>
-            <Link href="/admin/prewed-faq">
-              <Button variant="outline" size="sm">Pre-wed FAQ</Button>
-            </Link>
-            <Link href="/admin/clients/new">
-              <Button variant="outline" size="sm">New portal</Button>
-            </Link>
-          </div>
+          <AdminNavMenu />
         </div>
       </header>
 

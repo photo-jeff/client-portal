@@ -1,6 +1,7 @@
 'use client'
 import { useState } from 'react'
 import { ChevronDown } from 'lucide-react'
+import { RichText } from './RichText'
 
 interface FaqItem {
   title: string
@@ -28,8 +29,8 @@ export function FaqAccordion({ items }: { items: FaqItem[] }) {
           </button>
           {open === i && (
             <div className="px-7 pb-6 border-t border-[#f0ede8]">
-              <p className="text-sm text-[#919295] leading-relaxed pt-5 whitespace-pre-line">
-                {item.content}
+              <p className="text-sm text-[#919295] leading-relaxed pt-5">
+                <RichText text={item.content} />
               </p>
             </div>
           )}

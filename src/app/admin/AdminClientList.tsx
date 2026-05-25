@@ -86,7 +86,16 @@ export function AdminClientList({ clients }: { clients: Client[] }) {
             <tbody className="divide-y divide-[#f0ede8]">
               {filtered.map(c => (
                 <tr key={c.id as string} className="hover:bg-[#faf9f7]">
-                  <td className="px-6 py-4 font-serif text-lg">{c.partner1_name as string} & {c.partner2_name as string}</td>
+                  <td className="px-6 py-4 font-serif text-lg">
+                    <a
+                      href={`/portal/${c.portal_slug as string}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="hover:text-[#C9A96E] transition-colors"
+                    >
+                      {c.partner1_name as string} & {c.partner2_name as string}
+                    </a>
+                  </td>
                   <td className="px-6 py-4 text-[#888]">{c.email as string || '—'}</td>
                   <td className="px-6 py-4 text-[#888]">
                     {c.wedding_date ? new Date(c.wedding_date as string).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : '—'}

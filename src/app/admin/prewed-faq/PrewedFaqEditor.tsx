@@ -54,6 +54,9 @@ function ItemEditor({ item }: { item: FaqItem }) {
           rows={3}
           className="w-full text-sm text-[#535353] leading-relaxed border border-[#e0ddd8] rounded-lg px-3 py-2.5 focus:outline-none focus:border-[#1a1a1a] resize-y bg-[#faf9f7]"
         />
+        <p className="text-xs text-[#bbb] mt-1.5">
+          To add a link: <code className="bg-[#f0ede8] px-1 py-0.5 rounded text-[#888]">[link text](https://example.com)</code>
+        </p>
       </div>
     </div>
   )

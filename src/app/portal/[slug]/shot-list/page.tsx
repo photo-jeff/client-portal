@@ -32,7 +32,7 @@ export default async function ShotListPage({
         <h1 className="font-serif text-4xl mb-2">Shot List</h1>
         <Divider />
         <p className="text-sm text-[#919295] mt-4 max-w-md mx-auto">
-          We&apos;ll have a quick chat to build your personalised group shot list together — usually takes about 10 minutes.
+          Answer a few questions right here in the portal and we&apos;ll build your personalised group shot list together — usually takes about 10 minutes.
         </p>
       </div>
       <ShotListWizard

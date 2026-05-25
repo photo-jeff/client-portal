@@ -5,6 +5,7 @@ import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { ChevronLeft } from 'lucide-react'
 import { Divider } from '@/components/ui/Divider'
+import { RichText } from '@/components/portal/RichText'
 
 export default async function PrewedFaqPage({
   params,
@@ -69,7 +70,7 @@ export default async function PrewedFaqPage({
               <span className="font-medium text-[#1a1a1a] pr-4">{item.question}</span>
               <span className="shrink-0 text-[#919295] transition-transform group-open:rotate-45 text-xl leading-none">+</span>
             </summary>
-            <p className="mt-3 text-sm text-[#555] leading-relaxed">{item.answer}</p>
+            <p className="mt-3 text-sm text-[#555] leading-relaxed"><RichText text={item.answer} /></p>
           </details>
         ))}
       </div>

@@ -1,5 +1,6 @@
 'use client'
 import { useState, useEffect, useRef } from 'react'
+import Link from 'next/link'
 
 interface Message {
   role: 'user' | 'assistant'
@@ -165,7 +166,7 @@ export function ShotListWizard({ slug, partner1, partner2, weddingDate, existing
           <pre style={{ fontSize: '13px', lineHeight: 1.85, fontWeight: 300, whiteSpace: 'pre-wrap', color: '#e8e8e8', fontFamily: 'inherit', margin: 0 }}>
             {shotListReady}
           </pre>
-          <div className="flex gap-3 mt-5">
+          <div className="flex gap-3 mt-5 flex-wrap">
             <button
               onClick={copyToClipboard}
               style={{
@@ -182,12 +183,30 @@ export function ShotListWizard({ slug, partner1, partner2, weddingDate, existing
             >
               {copying ? 'Copied ✓' : 'Copy to clipboard'}
             </button>
+            <Link
+              href={`/portal/${slug}`}
+              style={{
+                background: 'transparent',
+                border: '1px solid #555',
+                color: '#aaa',
+                padding: '8px 20px',
+                fontSize: '11px',
+                letterSpacing: '2px',
+                textTransform: 'uppercase',
+                cursor: 'pointer',
+                fontWeight: 500,
+                textDecoration: 'none',
+                display: 'inline-block',
+              }}
+            >
+              Back to portal
+            </Link>
             <button
               onClick={restartWizard}
               style={{
                 background: 'transparent',
-                border: '1px solid #555',
-                color: '#888',
+                border: '1px solid #333',
+                color: '#555',
                 padding: '8px 20px',
                 fontSize: '11px',
                 letterSpacing: '2px',
@@ -224,7 +243,7 @@ export function ShotListWizard({ slug, partner1, partner2, weddingDate, existing
           Let&apos;s sort your<br />group shots 📸
         </h2>
         <p style={{ fontSize: '14px', color: '#aaa', lineHeight: 1.75, maxWidth: '400px', margin: '0 auto 32px', fontWeight: 300 }}>
-          Instead of a form, we&apos;ll have a quick chat — usually around 10 minutes — and build your personalised list together. We&apos;ll make sure we don&apos;t miss anyone important.
+          Answer a few questions right here — usually around 10 minutes — and we&apos;ll build your personalised list together. We&apos;ll make sure we don&apos;t miss anyone important.
         </p>
         <button
           onClick={startConversation}
@@ -308,13 +327,19 @@ export function ShotListWizard({ slug, partner1, partner2, weddingDate, existing
             <pre style={{ fontSize: '13px', lineHeight: 1.85, fontWeight: 300, whiteSpace: 'pre-wrap', color: '#e8e8e8', fontFamily: 'inherit', margin: 0 }}>
               {shotListReady}
             </pre>
-            <div className="flex gap-3 mt-5">
+            <div className="flex gap-3 mt-5 flex-wrap">
               <button
                 onClick={copyToClipboard}
                 style={{ background: 'transparent', border: '1px solid #C9A96E', color: '#C9A96E', padding: '8px 20px', fontSize: '11px', letterSpacing: '2px', textTransform: 'uppercase', cursor: 'pointer' }}
               >
                 {copying ? 'Copied ✓' : 'Copy to clipboard'}
               </button>
+              <Link
+                href={`/portal/${slug}`}
+                style={{ background: 'transparent', border: '1px solid #555', color: '#aaa', padding: '8px 20px', fontSize: '11px', letterSpacing: '2px', textTransform: 'uppercase', cursor: 'pointer', textDecoration: 'none', display: 'inline-block' }}
+              >
+                Back to portal
+              </Link>
             </div>
             {saved && (
               <p style={{ fontSize: '12px', color: '#666', marginTop: '12px' }}>
