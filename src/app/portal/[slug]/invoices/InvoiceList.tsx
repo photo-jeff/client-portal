@@ -12,6 +12,7 @@ interface BalanceData {
 interface ZohoData {
   url: string | null
   status: 'outstanding' | 'none' | 'no-contact' | 'error'
+  due_date: string | null
 }
 
 function fmt(n: number) {
@@ -52,7 +53,14 @@ function Box({
   )
 }
 
-export function InvoiceList({ slug }: { slug: string }) {
+function calcDueDate(weddingDate: string | null): string | null {
+  if (!weddingDate) return null
+  const d = new Date(weddingDate)
+  d.setDate(d.getDate() - 28)
+  return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })
+}
+
+export function InvoiceList({ slug, weddingDate }: { slug: string; weddingDate: string | null }) {
   const [data, setData] = useState<BalanceData | undefined>(undefined)
   const [zoho, setZoho] = useState<ZohoData | undefined>(undefined)
   const [creating, setCreating] = useState(false)
@@ -67,7 +75,7 @@ export function InvoiceList({ slug }: { slug: string }) {
     fetch(`/api/portal/zoho-invoice?slug=${slug}`)
       .then(r => r.json())
       .then(d => setZoho(d))
-      .catch(() => setZoho({ url: null, status: 'error' }))
+      .catch(() => setZoho({ url: null, status: 'error', due_date: null }))
   }, [slug])
 
   async function handlePay() {
@@ -84,10 +92,10 @@ export function InvoiceList({ slug }: { slug: string }) {
       try {
         const res = await fetch(`/api/portal/zoho-invoice?slug=${slug}`, { method: 'POST' })
         if (!res.ok) throw new Error('Failed to create invoice')
-        const { url } = await res.json()
+        const { url, due_date } = await res.json()
         if (url) {
           // Update local state so a refresh shows the existing invoice
-          setZoho({ url, status: 'outstanding' })
+          setZoho({ url, status: 'outstanding', due_date: due_date ?? null })
           window.open(url, '_blank')
         } else {
           setCreateError(true)
@@ -142,7 +150,18 @@ export function InvoiceList({ slug }: { slug: string }) {
             ? fmt(outstanding)
             : <span className="text-[#d0d3d6]">—</span>
         }
-        sub={outstanding === 0 ? 'All paid — thank you!' : outstanding !== null ? 'Amount currently outstanding' : undefined}
+        sub={
+          outstanding === 0
+            ? 'All paid — thank you!'
+            : outstanding !== null && outstanding > 0
+            ? (() => {
+                const due = zoho?.due_date
+                  ? new Date(zoho.due_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })
+                  : calcDueDate(weddingDate)
+                return due ? `Due by ${due}` : 'Amount currently outstanding'
+              })()
+            : undefined
+        }
         status={outstanding === 0 ? 'paid' : outstanding !== null && outstanding > 0 ? 'outstanding' : null}
       />
 

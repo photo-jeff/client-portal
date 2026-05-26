@@ -15,7 +15,7 @@ export default async function InvoicesPage({
 
   const { data: client } = await admin
     .from('clients')
-    .select('id')
+    .select('id, wedding_date')
     .eq('portal_slug', slug)
     .single()
 
@@ -30,7 +30,7 @@ export default async function InvoicesPage({
         <h1 className="font-serif text-4xl mb-2">Invoices</h1>
         <Divider />
       </div>
-      <InvoiceList slug={slug} />
+      <InvoiceList slug={slug} weddingDate={client.wedding_date ?? null} />
     </div>
   )
 }

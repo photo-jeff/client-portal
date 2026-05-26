@@ -48,34 +48,40 @@ export async function GET(request: NextRequest) {
     .single()
 
   if (!client?.zoho_contact_id) {
-    return NextResponse.json({ url: null, status: 'no-contact' })
+    return NextResponse.json({ url: null, status: 'none', due_date: null })
   }
 
   if (!process.env.ZOHO_CLIENT_ID || !process.env.ZOHO_CLIENT_SECRET || !process.env.ZOHO_REFRESH_TOKEN) {
-    return NextResponse.json({ url: null, status: 'error' })
+    return NextResponse.json({ url: null, status: 'error', due_date: null })
   }
 
   try {
     const token = await getZohoAccessToken()
+    // status=unpaid returns invoices with individual status 'sent' or 'overdue' (Zoho's filter label
+    // is 'unpaid' but each returned invoice.status is 'sent'/'overdue', NOT 'unpaid')
     const res = await fetch(
       `https://www.zohoapis.eu/books/v3/invoices?organization_id=${ORG_ID}&customer_id=${client.zoho_contact_id}&status=unpaid&sort_column=created_time&sort_order=D`,
       { headers: { Authorization: `Zoho-oauthtoken ${token}` } }
     )
 
     if (!res.ok) {
-      console.error('Zoho invoices fetch error:', await res.text())
-      return NextResponse.json({ url: null, status: 'error' })
+      console.error('[invoice GET] Zoho invoices fetch error:', await res.text())
+      return NextResponse.json({ url: null, status: 'error', due_date: null })
     }
 
     const data = await res.json()
-    const invoices: Array<{ invoice_id: string; invoice_url?: string; status: string }> = data.invoices ?? []
-    const unpaid = invoices.find(inv => inv.status === 'unpaid' || inv.status === 'overdue')
+    const invoices: Array<{ invoice_id: string; invoice_url?: string; status: string; due_date?: string }> = data.invoices ?? []
 
-    if (!unpaid) return NextResponse.json({ url: null, status: 'none' })
-    return NextResponse.json({ url: unpaid.invoice_url ?? null, status: 'outstanding' })
+    console.log('[invoice GET] invoices returned by Zoho:', invoices.map(i => ({ id: i.invoice_id, status: i.status, due_date: i.due_date })))
+
+    // Individual invoice status from Zoho is 'sent', 'overdue', 'paid' — never 'unpaid'
+    const unpaid = invoices.find(inv => inv.status === 'sent' || inv.status === 'overdue')
+
+    if (!unpaid) return NextResponse.json({ url: null, status: 'none', due_date: null })
+    return NextResponse.json({ url: unpaid.invoice_url ?? null, status: 'outstanding', due_date: unpaid.due_date ?? null })
   } catch (e) {
-    console.error('Zoho invoice GET failed:', e)
-    return NextResponse.json({ url: null, status: 'error' })
+    console.error('[invoice GET] failed:', e)
+    return NextResponse.json({ url: null, status: 'error', due_date: null })
   }
 }
 
@@ -118,6 +124,7 @@ export async function POST(request: NextRequest) {
     const dueDateFromWedding = weddingDate ? new Date(weddingDate.getTime() - 28 * 86400_000) : null
     const fallback = new Date(today.getTime() + 28 * 86400_000)
     const dueDate = dueDateFromWedding && dueDateFromWedding > today ? dueDateFromWedding : fallback
+    const dueDateStr = dueDate.toISOString().split('T')[0]
 
     const lineItemName = client.package_name
       ? `Wedding Photography — ${client.package_name}`
@@ -138,7 +145,7 @@ export async function POST(request: NextRequest) {
         body: JSON.stringify({
           customer_id: client.zoho_contact_id,
           invoice_date: today.toISOString().split('T')[0],
-          due_date: dueDate.toISOString().split('T')[0],
+          due_date: dueDateStr,
           line_items: [{ name: lineItemName, quantity: 1, rate: outstanding }],
           notes: [
             `Final balance for ${client.partner1_name} & ${client.partner2_name}`,
@@ -149,22 +156,21 @@ export async function POST(request: NextRequest) {
     )
 
     if (!createRes.ok) {
-      console.error('Zoho create invoice error:', await createRes.text())
+      console.error('[invoice POST] Zoho create error:', await createRes.text())
       return NextResponse.json({ error: 'Failed to create invoice' }, { status: 500 })
     }
 
     const createData = await createRes.json()
     const invoice = createData.invoice
+    console.log('[invoice POST] created invoice_id:', invoice?.invoice_id, 'status:', invoice?.status)
 
     if (!invoice?.invoice_id) {
-      console.error('Zoho invoice created but no invoice_id returned:', createData)
+      console.error('[invoice POST] no invoice_id in response:', createData)
       return NextResponse.json({ error: 'Invoice created but no ID returned' }, { status: 500 })
     }
 
-    // Send the invoice email to Jeff — this is the only reliable way to move a Zoho invoice
-    // from draft to sent status via the API. As a side effect, Jeff is notified when a client
-    // initiates payment. The client does NOT receive an automated email; they get the payment
-    // URL opened directly in their browser.
+    // Send invoice email to Jeff — this moves the invoice from draft → sent and notifies Jeff.
+    // The client does NOT receive an automated email; they get the payment URL in their browser.
     const emailRes = await fetch(
       `https://www.zohoapis.eu/books/v3/invoices/${invoice.invoice_id}/email?organization_id=${ORG_ID}`,
       {
@@ -180,27 +186,32 @@ export async function POST(request: NextRequest) {
         }),
       }
     )
+    const emailBody = await emailRes.json().catch(() => null)
+    console.log('[invoice POST] email response status:', emailRes.status, 'body:', JSON.stringify(emailBody))
+
     if (!emailRes.ok) {
-      console.error('Zoho email invoice error:', await emailRes.text())
+      console.error('[invoice POST] email failed — invoice left in draft')
       return NextResponse.json({ error: 'Invoice created but could not be activated' }, { status: 500 })
     }
 
-    // Refetch to get the activated invoice_url
+    // Refetch to confirm status and get the payment URL
     const refetchRes = await fetch(
       `https://www.zohoapis.eu/books/v3/invoices/${invoice.invoice_id}?organization_id=${ORG_ID}`,
       { headers: { Authorization: `Zoho-oauthtoken ${token}` } }
     )
     if (!refetchRes.ok) {
-      console.error('Zoho refetch invoice error:', await refetchRes.text())
+      console.error('[invoice POST] refetch error:', await refetchRes.text())
       return NextResponse.json({ error: 'Invoice submitted but could not fetch payment URL' }, { status: 500 })
     }
 
     const refetchData = await refetchRes.json()
+    console.log('[invoice POST] refetched status:', refetchData.invoice?.status, 'url:', refetchData.invoice?.invoice_url)
+
     const invoiceUrl: string | null = refetchData.invoice?.invoice_url ?? null
 
-    return NextResponse.json({ url: invoiceUrl })
+    return NextResponse.json({ url: invoiceUrl, due_date: dueDateStr })
   } catch (e) {
-    console.error('Zoho create invoice POST failed:', e)
+    console.error('[invoice POST] unexpected error:', e)
     return NextResponse.json({ error: 'Failed to create invoice' }, { status: 500 })
   }
 }
