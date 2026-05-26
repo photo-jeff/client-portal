@@ -111,11 +111,12 @@ export async function POST(request: NextRequest) {
   try {
     const token = await getZohoAccessToken()
 
-    // Due date: 14 days before the wedding, or 30 days from now — whichever is later
+    // Due date: 28 days before the wedding date.
+    // If that's already past (or no wedding date), fall back to 28 days from today.
     const today = new Date()
     const weddingDate = client.wedding_date ? new Date(client.wedding_date) : null
-    const dueDateFromWedding = weddingDate ? new Date(weddingDate.getTime() - 14 * 86400_000) : null
-    const fallback = new Date(today.getTime() + 30 * 86400_000)
+    const dueDateFromWedding = weddingDate ? new Date(weddingDate.getTime() - 28 * 86400_000) : null
+    const fallback = new Date(today.getTime() + 28 * 86400_000)
     const dueDate = dueDateFromWedding && dueDateFromWedding > today ? dueDateFromWedding : fallback
 
     const lineItemName = client.package_name
@@ -154,25 +155,48 @@ export async function POST(request: NextRequest) {
 
     const createData = await createRes.json()
     const invoice = createData.invoice
-    let invoiceUrl: string | null = invoice?.invoice_url ?? null
 
-    // Draft invoices may not have a payment URL yet — submit to activate
-    if (!invoiceUrl && invoice?.invoice_id) {
-      const submitRes = await fetch(
-        `https://www.zohoapis.eu/books/v3/invoices/${invoice.invoice_id}/submit?organization_id=${ORG_ID}`,
-        { method: 'POST', headers: { Authorization: `Zoho-oauthtoken ${token}` } }
-      )
-      if (submitRes.ok) {
-        const refetchRes = await fetch(
-          `https://www.zohoapis.eu/books/v3/invoices/${invoice.invoice_id}?organization_id=${ORG_ID}`,
-          { headers: { Authorization: `Zoho-oauthtoken ${token}` } }
-        )
-        if (refetchRes.ok) {
-          const refetchData = await refetchRes.json()
-          invoiceUrl = refetchData.invoice?.invoice_url ?? null
-        }
-      }
+    if (!invoice?.invoice_id) {
+      console.error('Zoho invoice created but no invoice_id returned:', createData)
+      return NextResponse.json({ error: 'Invoice created but no ID returned' }, { status: 500 })
     }
+
+    // Send the invoice email to Jeff — this is the only reliable way to move a Zoho invoice
+    // from draft to sent status via the API. As a side effect, Jeff is notified when a client
+    // initiates payment. The client does NOT receive an automated email; they get the payment
+    // URL opened directly in their browser.
+    const emailRes = await fetch(
+      `https://www.zohoapis.eu/books/v3/invoices/${invoice.invoice_id}/email?organization_id=${ORG_ID}`,
+      {
+        method: 'POST',
+        headers: {
+          Authorization: `Zoho-oauthtoken ${token}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          to_mail_ids: ['jeff@jeffoliverphotography.com'],
+          subject: `Invoice generated — ${client.partner1_name} & ${client.partner2_name}`,
+          body: `<p>An invoice for the final balance (£${outstanding.toFixed(2)}) has been generated for <strong>${client.partner1_name} &amp; ${client.partner2_name}</strong>${weddingDateStr ? ` (wedding ${weddingDateStr})` : ''} via the client portal.</p>`,
+        }),
+      }
+    )
+    if (!emailRes.ok) {
+      console.error('Zoho email invoice error:', await emailRes.text())
+      return NextResponse.json({ error: 'Invoice created but could not be activated' }, { status: 500 })
+    }
+
+    // Refetch to get the activated invoice_url
+    const refetchRes = await fetch(
+      `https://www.zohoapis.eu/books/v3/invoices/${invoice.invoice_id}?organization_id=${ORG_ID}`,
+      { headers: { Authorization: `Zoho-oauthtoken ${token}` } }
+    )
+    if (!refetchRes.ok) {
+      console.error('Zoho refetch invoice error:', await refetchRes.text())
+      return NextResponse.json({ error: 'Invoice submitted but could not fetch payment URL' }, { status: 500 })
+    }
+
+    const refetchData = await refetchRes.json()
+    const invoiceUrl: string | null = refetchData.invoice?.invoice_url ?? null
 
     return NextResponse.json({ url: invoiceUrl })
   } catch (e) {

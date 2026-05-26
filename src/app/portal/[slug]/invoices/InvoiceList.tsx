@@ -168,11 +168,25 @@ export function InvoiceList({ slug }: { slug: string }) {
 
           <div>
             <p className="text-xs tracking-[0.1em] uppercase text-[#919295] mb-2">How to pay</p>
-            <p className="text-sm text-[#919295] leading-relaxed">
+            <p className="text-sm text-[#919295] leading-relaxed mb-3">
               {canPay
                 ? 'Pay securely online using the button above, or by bank transfer using your names and wedding date as the reference.'
                 : 'Please pay by bank transfer using your names and wedding date as the reference, then drop us an email to confirm.'}
             </p>
+            <div className="text-sm space-y-1">
+              <div className="flex gap-3">
+                <span className="text-xs tracking-[0.08em] uppercase text-[#b5b8ba] w-24 shrink-0">Account name</span>
+                <span className="text-[#555]">Jeff Oliver Photography</span>
+              </div>
+              <div className="flex gap-3">
+                <span className="text-xs tracking-[0.08em] uppercase text-[#b5b8ba] w-24 shrink-0">Sort code</span>
+                <span className="text-[#555]">23-05-80</span>
+              </div>
+              <div className="flex gap-3">
+                <span className="text-xs tracking-[0.08em] uppercase text-[#b5b8ba] w-24 shrink-0">Account no.</span>
+                <span className="text-[#555]">11979157</span>
+              </div>
+            </div>
           </div>
 
         </div>
