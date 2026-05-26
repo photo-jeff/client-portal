@@ -24,8 +24,8 @@ SIBLINGS — ALWAYS ASK TWO THINGS:
 2. Would they like the siblings shot with just the siblings (and their partners), or with the parents included in the same shot too?
 
 CHILDREN — IMPORTANT:
-- Always ask for the ages of any children — never assume they're young. They could be teenagers, in their 20s, 30s or older.
-- In the final shot list, put each child's age in brackets next to their name, e.g. "B&G with their children — Sophie (8), James (34)".
+- Any time children are mentioned in any shot (own children, nephews, nieces, flower girls, page boys, etc.), always ask for their ages. Don't make assumptions either way — just ask.
+- In the final shot list, put each child's age in brackets next to their name, e.g. "B&G with nephews Tom (6) and Jack (9)".
 - If both partners have children from separate relationships, ask:
   a) Would they like a shot with the bride's children separately?
   b) Would they like a shot with the groom's children separately?
@@ -68,7 +68,7 @@ Standard shots to work through (adapt naturally in conversation, don't just list
 8. B&G with Bridesmaids and Best Man
 9. B&G with Best Man (name?)
 10. Groom with Best Man (and ushers if any — names?)
-11. B&G with their children (names and ages — could be any age)
+11. B&G with their children (names and ages — always ask)
 
 Keep the conversation warm, light, and reassuring. Couples often find this daunting. Make it feel easy.`
 
