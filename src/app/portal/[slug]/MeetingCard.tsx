@@ -1,8 +1,9 @@
+import Link from 'next/link'
 import { Phone, CalendarCheck } from 'lucide-react'
 
 interface Props {
   type: 'final_meeting' | 'phone_call'
-  calendlyUrl: string
+  slug: string
 }
 
 const CONFIG = {
@@ -22,7 +23,7 @@ const CONFIG = {
   },
 }
 
-export function MeetingCard({ type, calendlyUrl }: Props) {
+export function MeetingCard({ type, slug }: Props) {
   const { icon: Icon, label, heading, body, cta } = CONFIG[type]
 
   return (
@@ -33,18 +34,12 @@ export function MeetingCard({ type, calendlyUrl }: Props) {
           <p className="text-xs tracking-[0.12em] uppercase text-[#b5b8ba] mb-1">{label}</p>
           <p className="font-serif text-xl mb-2">{heading}</p>
           <p className="text-sm text-[#b5b8ba] mb-5 font-light">{body}</p>
-          {calendlyUrl ? (
-            <a
-              href={calendlyUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-block text-xs tracking-[0.1em] uppercase border border-white/40 px-4 py-2 hover:bg-white hover:text-[#535353] transition-colors"
-            >
-              {cta}
-            </a>
-          ) : (
-            <p className="text-xs text-[#666] italic">Booking link coming soon.</p>
-          )}
+          <Link
+            href={`/portal/${slug}/meeting`}
+            className="inline-block text-xs tracking-[0.1em] uppercase border border-white/40 px-4 py-2 hover:bg-white hover:text-[#535353] transition-colors"
+          >
+            {cta}
+          </Link>
         </div>
       </div>
     </div>

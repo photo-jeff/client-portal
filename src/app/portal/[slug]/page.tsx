@@ -60,12 +60,6 @@ export default async function PortalDashboard({
   const finalMeetingEnabled = (client as Record<string, unknown>).final_meeting_enabled      as boolean ?? false
   const phoneCallEnabled    = (client as Record<string, unknown>).phone_call_enabled         as boolean ?? false
 
-  // Fetch Calendly URLs for meeting cards
-  const { data: settingsRows } = await admin
-    .from('portal_settings')
-    .select('key, value')
-    .in('key', ['final_meeting_calendly_url', 'phone_call_calendly_url'])
-  const meetingSettings = Object.fromEntries((settingsRows ?? []).map(r => [r.key, r.value]))
   const shootInPast    = shootAt ? new Date(shootAt) < new Date() : false
   const datesOk        = daysUntil !== null && daysUntil > 0 && !shootInPast
 
@@ -114,16 +108,10 @@ export default async function PortalDashboard({
 
       {/* Final meeting or phone call booking */}
       {finalMeetingEnabled && (
-        <MeetingCard
-          type="final_meeting"
-          calendlyUrl={meetingSettings.final_meeting_calendly_url ?? ''}
-        />
+        <MeetingCard type="final_meeting" slug={slug} />
       )}
       {phoneCallEnabled && (
-        <MeetingCard
-          type="phone_call"
-          calendlyUrl={meetingSettings.phone_call_calendly_url ?? ''}
-        />
+        <MeetingCard type="phone_call" slug={slug} />
       )}
 
       {/* Sections */}
