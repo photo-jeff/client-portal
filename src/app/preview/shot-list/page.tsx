@@ -20,6 +20,8 @@ export default function PreviewShotList() {
         slug="preview"
         partner1="Paige"
         partner2="Jake"
+        partner1Role="Bride"
+        partner2Role="Groom"
         weddingDate={null}
         existingList={null}
       />

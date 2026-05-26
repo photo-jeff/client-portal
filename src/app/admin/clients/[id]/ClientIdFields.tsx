@@ -8,6 +8,52 @@ interface Props {
 
 type FieldType = 'text' | 'email' | 'date' | 'time' | 'url'
 
+const ROLE_OPTIONS = ['Bride', 'Groom', 'Partner'] as const
+
+function SelectField({
+  label, field, initial, clientId, options,
+}: {
+  label: string
+  field: string
+  initial: string | null
+  clientId: string
+  options: readonly string[]
+}) {
+  const [value, setValue] = useState(initial ?? options[0])
+  const [saved, setSaved] = useState(false)
+  const [saving, setSaving] = useState(false)
+
+  async function save(next: string) {
+    setValue(next)
+    if (next === (initial ?? options[0])) return
+    setSaving(true)
+    const res = await fetch(`/api/admin/client/${clientId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ [field]: next }),
+    })
+    setSaving(false)
+    if (res.ok) { setSaved(true); setTimeout(() => setSaved(false), 2000) }
+  }
+
+  return (
+    <div>
+      <dt className="text-xs tracking-[0.1em] uppercase text-[#888] mb-1">{label}</dt>
+      <dd className="flex items-center gap-2">
+        <select
+          value={value}
+          onChange={e => save(e.target.value)}
+          className="text-sm border-b border-transparent hover:border-[#e0ddd8] focus:border-[#C9A96E] focus:outline-none bg-transparent py-0.5 cursor-pointer"
+        >
+          {options.map(o => <option key={o} value={o}>{o}</option>)}
+        </select>
+        {saving && <span className="text-xs text-[#aaa] shrink-0">Saving…</span>}
+        {saved  && <span className="text-xs text-green-600 shrink-0">Saved ✓</span>}
+      </dd>
+    </div>
+  )
+}
+
 function Field({
   label, field, initial, clientId, type = 'text',
 }: {
@@ -72,6 +118,8 @@ export function ClientIdFields({ clientId, initialValues }: Props) {
     <>
       <Field label="Partner 1 name"        field="partner1_name"          initial={v('partner1_name')}          clientId={clientId} />
       <Field label="Partner 2 name"        field="partner2_name"          initial={v('partner2_name')}          clientId={clientId} />
+      <SelectField label="Partner 1 role"  field="partner1_role"          initial={v('partner1_role') ?? 'Bride'} clientId={clientId} options={ROLE_OPTIONS} />
+      <SelectField label="Partner 2 role"  field="partner2_role"          initial={v('partner2_role') ?? 'Groom'} clientId={clientId} options={ROLE_OPTIONS} />
       <Field label="Email"                 field="email"                  initial={v('email')}                  clientId={clientId} type="email" />
       <Field label="Wedding date"          field="wedding_date"           initial={v('wedding_date')}           clientId={clientId} type="date" />
       <Field label="Ceremony time"         field="ceremony_time"          initial={v('ceremony_time')}          clientId={clientId} type="time" />

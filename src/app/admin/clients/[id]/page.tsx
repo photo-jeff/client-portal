@@ -8,6 +8,7 @@ import { ClientIdFields } from './ClientIdFields'
 import { DeleteClientButton } from './DeleteClientButton'
 import { InviteButton } from './InviteButton'
 import { PrewedOverride } from './PrewedOverride'
+import { MeetingOverrides } from './MeetingOverrides'
 
 export default async function ClientDetailPage(props: { params: Promise<{ id: string }> }) {
   const { id } = await props.params
@@ -33,8 +34,10 @@ export default async function ClientDetailPage(props: { params: Promise<{ id: st
     .order('sort_order')
 
   const shotListText = (client as Record<string, unknown>).shot_list_text as string | null
-  const prewedOverride = (client as Record<string, unknown>).prewedding_override as string | null ?? null
-  const prewedShootAt  = (client as Record<string, unknown>).prewedding_shoot_at  as string | null ?? null
+  const prewedOverride       = (client as Record<string, unknown>).prewedding_override      as string | null ?? null
+  const prewedShootAt        = (client as Record<string, unknown>).prewedding_shoot_at       as string | null ?? null
+  const finalMeetingEnabled  = (client as Record<string, unknown>).final_meeting_enabled     as boolean ?? false
+  const phoneCallEnabled     = (client as Record<string, unknown>).phone_call_enabled        as boolean ?? false
   const isAlbumPackage = !!(client.package_name && (
     client.package_name.toLowerCase().includes('album') ||
     client.package_name.toLowerCase().includes('frame')
@@ -70,6 +73,8 @@ export default async function ClientDetailPage(props: { params: Promise<{ id: st
               initialValues={{
                 partner1_name: client.partner1_name ?? null,
                 partner2_name: client.partner2_name ?? null,
+                partner1_role: (client as Record<string, unknown>).partner1_role as string ?? 'Bride',
+                partner2_role: (client as Record<string, unknown>).partner2_role as string ?? 'Groom',
                 email: client.email ?? null,
                 wedding_date: client.wedding_date ?? null,
                 ceremony_time: client.ceremony_time ?? null,
@@ -156,6 +161,20 @@ export default async function ClientDetailPage(props: { params: Promise<{ id: st
               override={prewedOverride}
               shootAt={prewedShootAt}
               isAutoEligible={isAutoEligible}
+            />
+          </div>
+        </section>
+
+        {/* Pre-Wedding Meeting Booking */}
+        <section className="bg-white border border-[#e0ddd8] p-8 rounded-2xl">
+          <h2 className="font-serif text-xl mb-2">Meeting Booking</h2>
+          <p className="text-xs text-[#aaa] mb-6">Show a Calendly booking card on the portal dashboard for a final meeting or a phone call.</p>
+          <Divider />
+          <div className="mt-6">
+            <MeetingOverrides
+              clientId={client.id}
+              finalMeetingEnabled={finalMeetingEnabled}
+              phoneCallEnabled={phoneCallEnabled}
             />
           </div>
         </section>

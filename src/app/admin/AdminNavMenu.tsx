@@ -6,6 +6,7 @@ const NAV_ITEMS = [
   { label: 'New portal', href: '/admin/clients/new', highlight: true },
   { label: 'Archive', href: '/admin/archive' },
   { label: 'Email settings', href: '/admin/email-settings' },
+  { label: 'Meeting settings', href: '/admin/meeting-settings' },
   { label: 'FAQ', href: '/admin/faq' },
   { label: 'Pre-wed FAQ', href: '/admin/prewed-faq' },
 ]

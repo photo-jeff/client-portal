@@ -17,6 +17,8 @@ export function NewClientForm() {
   const [form, setForm] = useState({
     partner1_name: '',
     partner2_name: '',
+    partner1_role: 'Bride',
+    partner2_role: 'Groom',
     email: '',
     wedding_date: '',
     ceremony_venue: '',
@@ -96,6 +98,22 @@ export function NewClientForm() {
       <div className="grid grid-cols-2 gap-4">
         <Input label="Partner 1 name" value={form.partner1_name} onChange={e => update('partner1_name', e.target.value)} required />
         <Input label="Partner 2 name" value={form.partner2_name} onChange={e => update('partner2_name', e.target.value)} required />
+      </div>
+      <div className="grid grid-cols-2 gap-4">
+        <div className="flex flex-col gap-1">
+          <label className="text-xs tracking-[0.1em] uppercase text-[#888]">Partner 1 role</label>
+          <select value={form.partner1_role} onChange={e => update('partner1_role', e.target.value)}
+            className="px-3 py-2.5 text-sm border border-[#e0ddd8] rounded-lg bg-white focus:outline-none focus:border-[#c8c4be]">
+            <option>Bride</option><option>Groom</option><option>Partner</option>
+          </select>
+        </div>
+        <div className="flex flex-col gap-1">
+          <label className="text-xs tracking-[0.1em] uppercase text-[#888]">Partner 2 role</label>
+          <select value={form.partner2_role} onChange={e => update('partner2_role', e.target.value)}
+            className="px-3 py-2.5 text-sm border border-[#e0ddd8] rounded-lg bg-white focus:outline-none focus:border-[#c8c4be]">
+            <option>Bride</option><option>Groom</option><option>Partner</option>
+          </select>
+        </div>
       </div>
       <Input label="Client email" type="email" value={form.email} onChange={e => update('email', e.target.value)} required />
       <Input label="Wedding date" type="date" value={form.wedding_date} onChange={e => update('wedding_date', e.target.value)} />
