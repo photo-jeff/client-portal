@@ -129,6 +129,7 @@ export function ClientIdFields({ clientId, initialValues }: Props) {
       <Field label="VSCO Job ID"           field="vsco_job_id"            initial={v('vsco_job_id')}            clientId={clientId} />
       <Field label="Zoho Contact ID"       field="zoho_contact_id"        initial={v('zoho_contact_id')}        clientId={clientId} />
       <Field label="VSCO Questionnaire URL" field="vsco_questionnaire_url" initial={v('vsco_questionnaire_url')} clientId={clientId} type="url" />
+      <Field label="VSCO Shot List URL"     field="vsco_shot_list_url"     initial={v('vsco_shot_list_url')}     clientId={clientId} type="url" />
     </>
   )
 }

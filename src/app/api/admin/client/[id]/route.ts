@@ -5,7 +5,7 @@ import { NextRequest, NextResponse } from 'next/server'
 const ALLOWED_FIELDS = [
   'partner1_name', 'partner2_name', 'email', 'wedding_date',
   'ceremony_time', 'ceremony_venue', 'reception_venue', 'package_name',
-  'zoho_contact_id', 'vsco_job_id', 'vsco_questionnaire_url',
+  'zoho_contact_id', 'vsco_job_id', 'vsco_questionnaire_url', 'vsco_shot_list_url',
 ]
 
 export async function PATCH(request: NextRequest, props: { params: Promise<{ id: string }> }) {

@@ -84,6 +84,7 @@ export default async function ClientDetailPage(props: { params: Promise<{ id: st
                 vsco_job_id: client.vsco_job_id ?? null,
                 zoho_contact_id: (client as Record<string, unknown>).zoho_contact_id as string | null,
                 vsco_questionnaire_url: (client as Record<string, unknown>).vsco_questionnaire_url as string | null,
+                vsco_shot_list_url: (client as Record<string, unknown>).vsco_shot_list_url as string | null,
               }}
             />
           </dl>
