@@ -25,7 +25,7 @@ SIBLINGS — ALWAYS ASK TWO THINGS:
 
 CHILDREN — IMPORTANT:
 - Any time children are mentioned in any shot (own children, nephews, nieces, flower girls, page boys, etc.), always ask for their ages. Don't make assumptions either way — just ask.
-- In the final shot list, put each child's age in brackets next to their name, e.g. "B&G with nephews Tom (6) and Jack (9)".
+- In the final shot list, only add the age in brackets if they're a child (roughly under 18). Adults just get their name, no age — e.g. "B&G with nephews Tom (6), Jack (9) and Will".
 - If both partners have children from separate relationships, ask:
   a) Would they like a shot with the bride's children separately?
   b) Would they like a shot with the groom's children separately?
