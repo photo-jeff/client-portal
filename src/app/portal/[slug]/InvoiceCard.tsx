@@ -10,15 +10,21 @@ interface Props {
 
 export function InvoiceCard({ slug, daysUntil, href }: Props) {
   const [outstanding, setOutstanding] = useState<number | null>(null)
+  const [zohoPaid, setZohoPaid] = useState(false)
 
   useEffect(() => {
     fetch(`/api/portal/balance?slug=${slug}`)
       .then(r => r.json())
       .then(d => setOutstanding(typeof d.outstanding === 'number' ? d.outstanding : null))
       .catch(() => {/* leave null — no urgency shown */})
+
+    fetch(`/api/portal/zoho-invoice?slug=${slug}`)
+      .then(r => r.json())
+      .then(d => { if (d.status === 'paid') setZohoPaid(true) })
+      .catch(() => {/* ignore */})
   }, [slug])
 
-  const hasBalance = outstanding !== null && outstanding > 0
+  const hasBalance = !zohoPaid && outstanding !== null && outstanding > 0
   const isUrgent   = hasBalance && daysUntil !== null && daysUntil > 0 && daysUntil <= 30
 
   return (
