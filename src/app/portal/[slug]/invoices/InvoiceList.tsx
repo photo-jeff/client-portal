@@ -11,7 +11,7 @@ interface BalanceData {
 
 interface ZohoData {
   url: string | null
-  status: 'outstanding' | 'none' | 'no-contact' | 'error'
+  status: 'outstanding' | 'none' | 'paid' | 'no-contact' | 'error'
   due_date: string | null
 }
 
@@ -113,7 +113,10 @@ export function InvoiceList({ slug, weddingDate }: { slug: string; weddingDate: 
   const outstanding = data?.outstanding ?? null
   const remaining = total !== null ? Math.max(0, total - DEPOSIT) : null
 
-  const canPay = zoho?.status === 'outstanding' || zoho?.status === 'none'
+  const zohoPaid = zoho?.status === 'paid'
+  // If Zoho says the invoice is paid, override the VSCO outstanding figure
+  const displayOutstanding = zohoPaid ? 0 : outstanding
+  const canPay = !zohoPaid && (zoho?.status === 'outstanding' || zoho?.status === 'none')
   const zohoLoading = zoho === undefined
 
   return (
@@ -144,16 +147,16 @@ export function InvoiceList({ slug, weddingDate }: { slug: string; weddingDate: 
       <Box
         label="Final balance"
         value={
-          loading
+          loading || zohoLoading
             ? <span className="text-[#d0d3d6]">Loading…</span>
-            : outstanding !== null
-            ? fmt(outstanding)
+            : displayOutstanding !== null
+            ? fmt(displayOutstanding)
             : <span className="text-[#d0d3d6]">—</span>
         }
         sub={
-          outstanding === 0
+          displayOutstanding === 0
             ? 'All paid — thank you!'
-            : outstanding !== null && outstanding > 0
+            : displayOutstanding !== null && displayOutstanding > 0
             ? (() => {
                 const due = zoho?.due_date
                   ? new Date(zoho.due_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })
@@ -162,10 +165,10 @@ export function InvoiceList({ slug, weddingDate }: { slug: string; weddingDate: 
               })()
             : undefined
         }
-        status={outstanding === 0 ? 'paid' : outstanding !== null && outstanding > 0 ? 'outstanding' : null}
+        status={displayOutstanding === 0 ? 'paid' : displayOutstanding !== null && displayOutstanding > 0 ? 'outstanding' : null}
       />
 
-      {outstanding !== null && outstanding > 0 && (
+      {!zohoLoading && displayOutstanding !== null && displayOutstanding > 0 && (
         <div className="bg-[#faf9f7] border border-[#e0ddd8] p-5 rounded-xl space-y-4">
 
           {!zohoLoading && canPay && (
