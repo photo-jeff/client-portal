@@ -21,6 +21,18 @@ export default async function ClientDetailPage(props: { params: Promise<{ id: st
   const { data: client } = await admin.from('clients').select('*').eq('id', id).single()
   if (!client) notFound()
 
+  // Prev/next in same order as admin list (wedding_date asc, past > 10 weeks excluded)
+  const archiveThreshold = new Date(Date.now() - 70 * 86_400_000).toISOString().split('T')[0]
+  const { data: allClients } = await admin
+    .from('clients')
+    .select('id')
+    .or(`wedding_date.is.null,wedding_date.gte.${archiveThreshold}`)
+    .order('wedding_date', { ascending: true, nullsFirst: false })
+  const ids = (allClients ?? []).map((c: { id: string }) => c.id)
+  const idx = ids.indexOf(id)
+  const prevId = idx > 0 ? ids[idx - 1] : null
+  const nextId = idx < ids.length - 1 ? ids[idx + 1] : null
+
   const { data: questionnaire } = await admin
     .from('questionnaire_responses')
     .select('data, completed_at, updated_at')
@@ -50,13 +62,34 @@ export default async function ClientDetailPage(props: { params: Promise<{ id: st
   return (
     <div className="min-h-screen" style={{ background: '#faf9f7' }}>
       <header className="bg-white border-b border-[#e0ddd8]">
-        <div className="max-w-4xl mx-auto px-6 py-5 flex items-center gap-4">
-          <Link href="/admin" className="text-xs tracking-[0.1em] uppercase text-[#888] hover:text-[#1a1a1a] flex items-center gap-1">
-            ‹ Back
-          </Link>
-          <h1 className="font-serif text-xl">
-            {client.partner1_name} & {client.partner2_name}
-          </h1>
+        <div className="max-w-4xl mx-auto px-6 py-5 flex items-center justify-between gap-4">
+          <div className="flex items-center gap-4">
+            <Link href="/admin" className="text-xs tracking-[0.1em] uppercase text-[#888] hover:text-[#1a1a1a] flex items-center gap-1">
+              ‹ Back
+            </Link>
+            <h1 className="font-serif text-xl">
+              {client.partner1_name} & {client.partner2_name}
+            </h1>
+          </div>
+          <div className="flex items-center gap-1">
+            {prevId ? (
+              <Link href={`/admin/clients/${prevId}`} className="px-3 py-1.5 text-sm text-[#888] hover:text-[#1a1a1a] hover:bg-[#f5f3f0] rounded-lg transition-colors" title="Previous client">
+                ‹ Prev
+              </Link>
+            ) : (
+              <span className="px-3 py-1.5 text-sm text-[#ccc] cursor-default">‹ Prev</span>
+            )}
+            {idx >= 0 && (
+              <span className="text-xs text-[#ccc] px-1">{idx + 1} / {ids.length}</span>
+            )}
+            {nextId ? (
+              <Link href={`/admin/clients/${nextId}`} className="px-3 py-1.5 text-sm text-[#888] hover:text-[#1a1a1a] hover:bg-[#f5f3f0] rounded-lg transition-colors" title="Next client">
+                Next ›
+              </Link>
+            ) : (
+              <span className="px-3 py-1.5 text-sm text-[#ccc] cursor-default">Next ›</span>
+            )}
+          </div>
         </div>
       </header>
 
