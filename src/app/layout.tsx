@@ -23,6 +23,14 @@ const inter = Inter({
 export const metadata: Metadata = {
   title: 'Jeff Oliver Photography | Client Portal',
   description: 'Your personal wedding portal',
+  icons: {
+    apple: '/apple-touch-icon.png',
+  },
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'black-translucent',
+    title: 'JOP Portal',
+  },
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
