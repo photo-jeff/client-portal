@@ -124,25 +124,25 @@ export default async function PortalDashboard({
         <SectionCard
           title="Questionnaire"
           description={
-            isClose
-              ? "Please complete this before your wedding day — we need your answers to plan everything."
-              : "Help us understand your day. No rush — come back a few months before the wedding."
+            isUrgent
+              ? "Please complete this as soon as possible — we need your answers at least 3 weeks before your wedding."
+              : "Help us understand your day. Please aim to complete this at least 3 weeks before your wedding."
           }
           href={`/portal/${slug}/questionnaire`}
           completed={questionnaireComplete}
-          required={isClose && !questionnaireComplete}
+          required={isUrgent && !questionnaireComplete}
           urgent={isUrgent && !questionnaireComplete}
         />
         <SectionCard
           title="Shot List"
           description={
-            isClose
-              ? "Please submit your group shot requests — we need these at least 2 weeks before."
-              : "Build your list of must-have group photos. Worth thinking about as you get closer."
+            isUrgent
+              ? "Please submit your group shot requests as soon as possible — we need these at least 3 weeks before."
+              : "Build your list of must-have group photos. Please aim to complete this at least 3 weeks before your wedding."
           }
           href={`/portal/${slug}/shot-list`}
           completed={shotListComplete}
-          required={isClose && !shotListComplete}
+          required={isUrgent && !shotListComplete}
           urgent={isUrgent && !shotListComplete}
         />
         <InvoiceCard
