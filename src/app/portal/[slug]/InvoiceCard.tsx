@@ -30,7 +30,7 @@ export function InvoiceCard({ slug, daysUntil, href }: Props) {
   return (
     <SectionCard
       title="Invoices"
-      description="Pay your deposit or balance online."
+      description="View or pay your balance."
       href={href}
       urgent={isUrgent}
     />
