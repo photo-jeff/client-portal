@@ -45,6 +45,14 @@ export default async function ClientDetailPage(props: { params: Promise<{ id: st
     .eq('client_id', id)
     .order('sort_order')
 
+  const { data: shotListChat } = await admin
+    .from('shot_list_chats')
+    .select('messages, completed_at')
+    .eq('client_id', id)
+    .order('completed_at', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+
   const shotListText = (client as Record<string, unknown>).shot_list_text as string | null
   const prewedOverride       = (client as Record<string, unknown>).prewedding_override      as string | null ?? null
   const prewedShootAt        = (client as Record<string, unknown>).prewedding_shoot_at       as string | null ?? null
@@ -181,6 +189,31 @@ export default async function ClientDetailPage(props: { params: Promise<{ id: st
             </pre>
           ) : (
             <p className="mt-6 text-sm text-[#888]">Client hasn&apos;t completed their shot list yet.</p>
+          )}
+
+          {shotListChat && Array.isArray(shotListChat.messages) && shotListChat.messages.length > 0 && (
+            <details className="mt-8">
+              <summary className="cursor-pointer text-xs tracking-[0.1em] uppercase text-[#888] hover:text-[#1a1a1a] select-none">
+                View chat transcript
+              </summary>
+              <div className="mt-4 space-y-3 max-h-[600px] overflow-y-auto">
+                {(shotListChat.messages as { role: string; content: string; hidden?: boolean }[])
+                  .filter(m => !m.hidden)
+                  .map((msg, i) => (
+                    <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                      <div
+                        className={`max-w-[80%] px-4 py-2.5 rounded-2xl text-sm leading-relaxed whitespace-pre-wrap ${
+                          msg.role === 'user'
+                            ? 'bg-[#f5f3f0] text-[#1a1a1a] rounded-br-sm'
+                            : 'bg-[#1a1a1a] text-[#e8e8e8] rounded-bl-sm'
+                        }`}
+                      >
+                        {msg.content}
+                      </div>
+                    </div>
+                  ))}
+              </div>
+            </details>
           )}
         </section>
 

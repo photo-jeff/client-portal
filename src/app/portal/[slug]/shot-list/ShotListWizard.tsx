@@ -110,12 +110,20 @@ export function ShotListWizard({ slug, partner1, partner2, partner1Role, partner
             content: (before.trim() ? before.trim() + '\n\n' : '') + '✨ Your shot list is ready below!',
           },
         ])
-        // Save to database
-        await fetch('/api/portal/shot-list-text', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ slug, text: listText }),
-        })
+        // Save shot list text and full chat transcript
+        const allMessages = [...newMessages, { role: 'assistant', content: reply }]
+        await Promise.all([
+          fetch('/api/portal/shot-list-text', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ slug, text: listText }),
+          }),
+          fetch('/api/portal/shot-list-chat', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ slug, messages: allMessages }),
+          }),
+        ])
         setSaved(true)
       } else {
         setMessages(prev => [...prev, { role: 'assistant', content: reply }])
