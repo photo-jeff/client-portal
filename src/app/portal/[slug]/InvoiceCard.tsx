@@ -25,12 +25,12 @@ export function InvoiceCard({ slug, daysUntil, href }: Props) {
   }, [slug])
 
   const hasBalance = !zohoPaid && outstanding !== null && outstanding > 0
-  const isUrgent   = hasBalance && daysUntil !== null && daysUntil > 0 && daysUntil <= 30
+  const isUrgent   = hasBalance && daysUntil !== null && daysUntil > 0 && daysUntil <= 42
 
   return (
     <SectionCard
       title="Invoices"
-      description="Your deposit and balance information."
+      description="Pay your deposit or balance online."
       href={href}
       urgent={isUrgent}
     />
