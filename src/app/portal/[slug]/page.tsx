@@ -37,7 +37,12 @@ export default async function PortalDashboard({
     .eq('client_id', client.id)
 
   const questionnaireComplete = !!questionnaire?.completed_at
-  const shotListComplete = (shotListItems?.length ?? 0) > 0
+  // Completion can come from either the legacy structured items or the
+  // conversational wizard, which saves the finished list to shot_list_text.
+  const shotListText = (client as Record<string, unknown>).shot_list_text as string | null
+  const shotListComplete =
+    (shotListItems?.length ?? 0) > 0 ||
+    (typeof shotListText === 'string' && shotListText.trim().length > 0)
 
   const weddingDate = client.wedding_date
     ? new Date(client.wedding_date).toLocaleDateString('en-GB', {
