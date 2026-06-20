@@ -113,10 +113,16 @@ export function InvoiceList({ slug, weddingDate }: { slug: string; weddingDate: 
   const outstanding = data?.outstanding ?? null
   const remaining = total !== null ? Math.max(0, total - DEPOSIT) : null
 
-  const zohoPaid = zoho?.status === 'paid'
-  // If Zoho says the invoice is paid, override the VSCO outstanding figure
-  const displayOutstanding = zohoPaid ? 0 : outstanding
-  const canPay = !zohoPaid && (zoho?.status === 'outstanding' || zoho?.status === 'none')
+  // VSCO's account balance is the source of truth for what's still owed. A paid
+  // deposit invoice in Zoho must never zero this out.
+  const displayOutstanding = outstanding
+  // Zoho 'paid' here means a payment is settled / pending reconciliation — used
+  // only to suppress the Pay button (anti double-pay), never to mark the whole
+  // balance as cleared.
+  const canPay =
+    displayOutstanding !== null &&
+    displayOutstanding > 0 &&
+    (zoho?.status === 'outstanding' || zoho?.status === 'none')
   const zohoLoading = zoho === undefined
 
   return (

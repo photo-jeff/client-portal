@@ -1,4 +1,5 @@
 import { createAdminClient } from '@/lib/supabase/admin'
+import { fetchVscoJobDetails } from '@/lib/vsco-job'
 import { NextRequest, NextResponse } from 'next/server'
 
 function slugify(p1: string, p2: string) {
@@ -21,6 +22,7 @@ export async function POST(request: NextRequest) {
     wedding_date?: string | null    // YYYY-MM-DD
     ceremony_time?: string | null   // HH:MM
     ceremony_venue?: string | null
+    reception_venue?: string | null
     package_name?: string | null
     vsco_job_id?: string | null
     zoho_contact_id?: string | null
@@ -56,14 +58,33 @@ export async function POST(request: NextRequest) {
     }
   }
 
+  // The booking form is the source of truth — it now carries the ceremony &
+  // reception addresses, date and package. The VSCO job API is only a fallback to
+  // fill gaps for bookings that didn't come through the form (e.g. planner
+  // referrals). VSCO has just one venue, so it can only ever seed the ceremony.
+  let weddingDate = body.wedding_date ?? null
+  let ceremonyVenue = body.ceremony_venue ?? null
+  const receptionVenue = body.reception_venue ?? null
+  let packageName = body.package_name ?? null
+
+  if (vscoJobId && (!weddingDate || !ceremonyVenue || !packageName)) {
+    const details = await fetchVscoJobDetails(vscoJobId)
+    if (details) {
+      weddingDate = weddingDate ?? details.wedding_date
+      ceremonyVenue = ceremonyVenue ?? details.venue
+      packageName = packageName ?? details.package_name
+    }
+  }
+
   const { error } = await admin.from('clients').insert({
     email,
     partner1_name: partner1,
     partner2_name: partner2 || '',
-    wedding_date: body.wedding_date ?? null,
-    ceremony_venue: body.ceremony_venue ?? null,
+    wedding_date: weddingDate,
+    ceremony_venue: ceremonyVenue,
+    reception_venue: receptionVenue,
     ceremony_time: body.ceremony_time ?? null,
-    package_name: body.package_name ?? null,
+    package_name: packageName,
     portal_slug: slug,
     vsco_job_id: vscoJobId,
     zoho_contact_id: body.zoho_contact_id ?? null,

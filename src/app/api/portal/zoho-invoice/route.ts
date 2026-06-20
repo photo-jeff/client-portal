@@ -43,7 +43,7 @@ export async function GET(request: NextRequest) {
   const admin = createAdminClient()
   const { data: client } = await admin
     .from('clients')
-    .select('zoho_contact_id')
+    .select('zoho_contact_id, vsco_job_id')
     .eq('portal_slug', slug)
     .single()
 
@@ -78,16 +78,31 @@ export async function GET(request: NextRequest) {
     const unpaid = invoices.find(inv => inv.status === 'sent' || inv.status === 'overdue')
     if (unpaid) return NextResponse.json({ url: unpaid.invoice_url ?? null, status: 'outstanding', due_date: unpaid.due_date ?? null })
 
-    // No unpaid invoice — check whether one was already paid (so we don't show "Pay Here" again)
+    // No unpaid invoice. VSCO's account balance — not the mere existence of a paid
+    // invoice — decides whether the balance is settled. (A paid *deposit* invoice
+    // must NOT make the whole balance read as "all paid".)
+    const vscoOutstanding = client.vsco_job_id ? await getVscoOutstanding(client.vsco_job_id) : null
+
+    // Balance genuinely cleared in VSCO
+    if (vscoOutstanding !== null && vscoOutstanding <= 0) {
+      return NextResponse.json({ url: null, status: 'paid', due_date: null })
+    }
+
+    // VSCO still shows a balance. Check whether a recent online payment likely
+    // covers it but hasn't been reconciled into VSCO yet — if so, report 'paid' to
+    // suppress the Pay button and avoid double-charging. A paid deposit (total
+    // below the outstanding balance) does not qualify.
     const paidRes = await fetch(
       `https://www.zohoapis.eu/books/v3/invoices?organization_id=${ORG_ID}&customer_id=${client.zoho_contact_id}&status=paid&sort_column=created_time&sort_order=D&per_page=1`,
       { headers: { Authorization: `Zoho-oauthtoken ${token}` } }
     )
     if (paidRes.ok) {
       const paidData = await paidRes.json()
-      const paid = (paidData.invoices ?? []).find((inv: { status: string }) => inv.status === 'paid')
-      if (paid) {
-        console.log('[invoice GET] found paid invoice for', slug)
+      const paid = (paidData.invoices ?? []).find(
+        (inv: { status: string }) => inv.status === 'paid'
+      ) as { total?: number } | undefined
+      if (paid && vscoOutstanding !== null && typeof paid.total === 'number' && paid.total >= vscoOutstanding) {
+        console.log('[invoice GET] recent paid invoice covers VSCO balance (pending reconciliation) for', slug)
         return NextResponse.json({ url: null, status: 'paid', due_date: null })
       }
     }

@@ -659,12 +659,20 @@ const server = http.createServer(async (req, res) => {
 
       // Create client portal (fire-and-forget — doesn't block response)
       if (PORTAL_SECRET) {
-        const groomFirst  = body.groom_first_name || body['groom.first_name'] || '';
-        const groomLast   = body.groom_last_name  || body['groom.last_name']  || '';
-        const rawDate     = body.wedding_date     || body['wedding_day.start_date'] || '';
-        const rawTime     = body.ceremony_time    || body['ceremony.start_time']    || '';
-        const venue       = body.wedding_venue    || body['job.custom.wedding_venue'] || '';
-        const packageName = body.package_name     || body.collection || '';
+        const groomFirst   = body.groom_first_name || body['groom.first_name'] || '';
+        const groomLast    = body.groom_last_name  || body['groom.last_name']  || '';
+        const rawDate      = body.wedding_date     || body['wedding_day.start_date'] || '';
+        const rawTime      = body.ceremony_time    || body['ceremony.start_time']    || '';
+        const weddingVenue = body.wedding_venue    || body['job.custom.wedding_venue'] || '';
+        const ceremonyAddr = body.ceremony_address || '';
+        const receptionAddr= body.reception_address|| '';
+        const packageName  = body.package_name     || body.collection || '';
+
+        // The booking form's dedicated address fields are the source of truth for
+        // the ceremony/reception split. Fall back to the single Wedding Venue field
+        // for the ceremony when no ceremony address was provided.
+        const ceremonyVenue  = ceremonyAddr || weddingVenue || '';
+        const receptionVenue = receptionAddr || '';
 
         fetch(`${PORTAL_BASE}/api/webhooks/vsco-job?secret=${PORTAL_SECRET}`, {
           method:  'POST',
@@ -674,7 +682,8 @@ const server = http.createServer(async (req, res) => {
             partner2_name:   `${groomFirst} ${groomLast}`.trim() || null,
             email:           payload.email,
             wedding_date:    normaliseDate(rawDate),
-            ceremony_venue:  venue || null,
+            ceremony_venue:  ceremonyVenue || null,
+            reception_venue: receptionVenue || null,
             ceremony_time:   normaliseTime(rawTime),
             package_name:    packageName || null,
             vsco_job_id:     vscoUlid || payload.jobId,
