@@ -9,6 +9,8 @@ import { DeleteClientButton } from './DeleteClientButton'
 import { InviteButton } from './InviteButton'
 import { PrewedOverride } from './PrewedOverride'
 import { MeetingOverrides } from './MeetingOverrides'
+import { ShotListComplete } from './ShotListComplete'
+import { ResyncQuestionnaire } from './ResyncQuestionnaire'
 
 export default async function ClientDetailPage(props: { params: Promise<{ id: string }> }) {
   const { id } = await props.params
@@ -54,6 +56,8 @@ export default async function ClientDetailPage(props: { params: Promise<{ id: st
     .maybeSingle()
 
   const shotListText = (client as Record<string, unknown>).shot_list_text as string | null
+  const shotListManuallyComplete = (client as Record<string, unknown>).shot_list_completed as boolean ?? false
+  const hasSubmittedList = !!shotListText || (shotList?.length ?? 0) > 0
   const prewedOverride       = (client as Record<string, unknown>).prewedding_override      as string | null ?? null
   const prewedShootAt        = (client as Record<string, unknown>).prewedding_shoot_at       as string | null ?? null
   const finalMeetingEnabled  = (client as Record<string, unknown>).final_meeting_enabled     as boolean ?? false
@@ -172,14 +176,27 @@ export default async function ClientDetailPage(props: { params: Promise<{ id: st
           ) : (
             <p className="mt-6 text-sm text-[#888]">Client hasn&apos;t filled this in yet.</p>
           )}
+
+          <div className="mt-6 pt-6 border-t border-[#f0ede8]">
+            <p className="text-xs text-[#aaa] mb-3">
+              Re-push these answers to the client&apos;s VSCO questionnaire form — use after a change so VSCO stays in sync.
+            </p>
+            <ResyncQuestionnaire
+              clientId={client.id}
+              hasUrl={!!(client as Record<string, unknown>).vsco_questionnaire_url}
+              hasAnswers={!!questionnaire?.data && Object.keys(questionnaire.data as Record<string, unknown>).length > 0}
+            />
+          </div>
         </section>
 
         {/* Shot List */}
         <section className="bg-white border border-[#e0ddd8] p-8 rounded-2xl">
           <div className="flex items-center justify-between mb-6">
             <h2 className="font-serif text-xl">Shot List</h2>
-            {shotListText && (
-              <span className="text-xs tracking-[0.1em] uppercase text-green-600">Completed</span>
+            {(hasSubmittedList || shotListManuallyComplete) && (
+              <span className="text-xs tracking-[0.1em] uppercase text-green-600">
+                Completed{!hasSubmittedList && shotListManuallyComplete ? ' (marked manually)' : ''}
+              </span>
             )}
           </div>
           <Divider />
@@ -188,8 +205,19 @@ export default async function ClientDetailPage(props: { params: Promise<{ id: st
               {shotListText}
             </pre>
           ) : (
-            <p className="mt-6 text-sm text-[#888]">Client hasn&apos;t completed their shot list yet.</p>
+            <p className="mt-6 text-sm text-[#888]">Client hasn&apos;t completed their shot list in the portal.</p>
           )}
+
+          <div className="mt-6 pt-6 border-t border-[#f0ede8]">
+            <p className="text-xs text-[#aaa] mb-3">
+              If a couple sends their shot list outside the portal, mark it complete here so the portal checklist reflects it.
+            </p>
+            <ShotListComplete
+              clientId={client.id}
+              completed={shotListManuallyComplete}
+              hasList={hasSubmittedList}
+            />
+          </div>
 
           {shotListChat && Array.isArray(shotListChat.messages) && shotListChat.messages.length > 0 && (
             <details className="mt-8">

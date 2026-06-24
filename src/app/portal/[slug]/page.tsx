@@ -39,8 +39,12 @@ export default async function PortalDashboard({
   const questionnaireComplete = !!questionnaire?.completed_at
   // Completion can come from either the legacy structured items or the
   // conversational wizard, which saves the finished list to shot_list_text.
+  // It can also be set manually by Jeff (e.g. when a couple sends a list
+  // outside the portal) via the admin shot_list_completed flag.
   const shotListText = (client as Record<string, unknown>).shot_list_text as string | null
+  const shotListManuallyComplete = (client as Record<string, unknown>).shot_list_completed as boolean ?? false
   const shotListComplete =
+    shotListManuallyComplete ||
     (shotListItems?.length ?? 0) > 0 ||
     (typeof shotListText === 'string' && shotListText.trim().length > 0)
 
@@ -157,7 +161,7 @@ export default async function PortalDashboard({
         />
         <SectionCard
           title="For Your Venue"
-          description="Photographer details, insurance documents, and what to expect on the day."
+          description="Photographer details, insurance documents and general information for your venue."
           href={`/portal/${slug}/venue-info`}
         />
         <SectionCard
