@@ -61,7 +61,11 @@ function mapSpeeches(val: string | undefined): string {
   const lower = val.toLowerCase()
   if (lower.includes('after')) return 'After the meal'
   if (lower.includes('before')) return 'Before the meal'
-  return val
+  // VSCO's required dropdown only offers Before / After / Other — the portal
+  // also lets couples pick "during", which has no VSCO equivalent. Anything
+  // that isn't before/after maps to "Other" so the form passes validation
+  // (sending an off-list value fails the whole page silently).
+  return 'Other'
 }
 
 function toVscoTime(val: string | undefined): string {
