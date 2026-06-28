@@ -126,9 +126,13 @@ export async function POST(request: NextRequest) {
   const admin = createAdminClient()
   const { data: client } = await admin
     .from('clients')
-    .select('zoho_contact_id, package_name, wedding_date, vsco_job_id, partner1_name, partner2_name')
+    .select('zoho_contact_id, package_name, wedding_date, vsco_job_id, partner1_name, partner2_name, payments_disabled')
     .eq('portal_slug', slug)
     .single()
+
+  if (client?.payments_disabled) {
+    return NextResponse.json({ error: 'Portal payment is disabled for this client' }, { status: 403 })
+  }
 
   if (!client?.zoho_contact_id) {
     return NextResponse.json({ error: 'No Zoho contact for this client' }, { status: 400 })

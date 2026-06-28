@@ -60,7 +60,7 @@ function calcDueDate(weddingDate: string | null): string | null {
   return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })
 }
 
-export function InvoiceList({ slug, weddingDate }: { slug: string; weddingDate: string | null }) {
+export function InvoiceList({ slug, weddingDate, paymentsDisabled = false }: { slug: string; weddingDate: string | null; paymentsDisabled?: boolean }) {
   const [data, setData] = useState<BalanceData | undefined>(undefined)
   const [zoho, setZoho] = useState<ZohoData | undefined>(undefined)
   const [creating, setCreating] = useState(false)
@@ -120,6 +120,7 @@ export function InvoiceList({ slug, weddingDate }: { slug: string; weddingDate: 
   // only to suppress the Pay button (anti double-pay), never to mark the whole
   // balance as cleared.
   const canPay =
+    !paymentsDisabled &&
     displayOutstanding !== null &&
     displayOutstanding > 0 &&
     (zoho?.status === 'outstanding' || zoho?.status === 'none')
@@ -174,7 +175,16 @@ export function InvoiceList({ slug, weddingDate }: { slug: string; weddingDate: 
         status={displayOutstanding === 0 ? 'paid' : displayOutstanding !== null && displayOutstanding > 0 ? 'outstanding' : null}
       />
 
-      {!zohoLoading && displayOutstanding !== null && displayOutstanding > 0 && (
+      {!zohoLoading && displayOutstanding !== null && displayOutstanding > 0 && paymentsDisabled && (
+        <div className="bg-[#faf9f7] border border-[#e0ddd8] p-5 rounded-xl">
+          <p className="text-xs tracking-[0.1em] uppercase text-[#919295] mb-2">How to pay</p>
+          <p className="text-sm text-[#919295] leading-relaxed">
+            An invoice for your final balance will be sent to you separately. Please refer to that invoice to pay — there&apos;s nothing to pay here.
+          </p>
+        </div>
+      )}
+
+      {!zohoLoading && displayOutstanding !== null && displayOutstanding > 0 && !paymentsDisabled && (
         <div className="bg-[#faf9f7] border border-[#e0ddd8] p-5 rounded-xl space-y-4">
 
           {!zohoLoading && canPay && (
