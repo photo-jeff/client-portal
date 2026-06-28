@@ -11,6 +11,7 @@ import { PrewedOverride } from './PrewedOverride'
 import { MeetingOverrides } from './MeetingOverrides'
 import { ShotListComplete } from './ShotListComplete'
 import { ResyncQuestionnaire } from './ResyncQuestionnaire'
+import { PaymentsToggle } from './PaymentsToggle'
 
 export default async function ClientDetailPage(props: { params: Promise<{ id: string }> }) {
   const { id } = await props.params
@@ -62,6 +63,7 @@ export default async function ClientDetailPage(props: { params: Promise<{ id: st
   const prewedShootAt        = (client as Record<string, unknown>).prewedding_shoot_at       as string | null ?? null
   const finalMeetingEnabled  = (client as Record<string, unknown>).final_meeting_enabled     as boolean ?? false
   const phoneCallEnabled     = (client as Record<string, unknown>).phone_call_enabled        as boolean ?? false
+  const paymentsDisabled     = (client as Record<string, unknown>).payments_disabled          as boolean ?? false
   const isAlbumPackage = !!(client.package_name && (
     client.package_name.toLowerCase().includes('album') ||
     client.package_name.toLowerCase().includes('frame')
@@ -256,6 +258,19 @@ export default async function ClientDetailPage(props: { params: Promise<{ id: st
               override={prewedOverride}
               shootAt={prewedShootAt}
               isAutoEligible={isAutoEligible}
+            />
+          </div>
+        </section>
+
+        {/* Payments */}
+        <section className="bg-white border border-[#e0ddd8] p-8 rounded-2xl">
+          <h2 className="font-serif text-xl mb-2">Payments</h2>
+          <p className="text-xs text-[#aaa] mb-6">Switch off portal payment when the invoice is being raised elsewhere.</p>
+          <Divider />
+          <div className="mt-6">
+            <PaymentsToggle
+              clientId={client.id}
+              paymentsDisabled={paymentsDisabled}
             />
           </div>
         </section>
