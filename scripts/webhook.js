@@ -863,6 +863,39 @@ const server = http.createServer(async (req, res) => {
     })(); return;
   }
 
+  // ─── PORTAL STATE ─────────────────────────────────────────────────────────
+  // Read-only view of per-client portal flags (currently payments_disabled),
+  // consumed by the JOP Invoice Run dashboard via the get_portal_state MCP
+  // tool in index.js. Localhost only: this server is also reachable through
+  // the public Cloudflare tunnel, and client rows must never be served there —
+  // tunnel requests carry cf-connecting-ip and a public Host, both refused.
+  if (req.method === 'GET' && url.pathname === '/portal-state') {
+    const t0 = Date.now();
+    (async () => {
+      try {
+        const host = (req.headers.host || '').split(':')[0];
+        if (req.headers['cf-connecting-ip'] || (host !== 'localhost' && host !== '127.0.0.1')) {
+          res.writeHead(404);
+          res.end(JSON.stringify({ error: 'Not found' }));
+          return;
+        }
+        if (!SUPABASE_KEY) throw new Error('SUPABASE_SERVICE_ROLE_KEY not set');
+        const fields = 'vsco_job_id,zoho_contact_id,payments_disabled,partner1_name';
+        const r = await fetch(`${SUPABASE_URL}/rest/v1/clients?select=${fields}`, {
+          headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` },
+        });
+        if (!r.ok) throw new Error(`Supabase ${r.status}: ${(await r.text()).slice(0, 200)}`);
+        const clients = await r.json();
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ clients, count: clients.length, ms: Date.now() - t0 }));
+      } catch (err) {
+        console.error('portal-state error:', err.message);
+        res.writeHead(502, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: err.message }));
+      }
+    })(); return;
+  }
+
   // 404
   res.writeHead(404);
   res.end(JSON.stringify({ error: 'Not found' }));
