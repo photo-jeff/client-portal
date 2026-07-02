@@ -771,6 +771,22 @@ const server = http.createServer(async (req, res) => {
   // ─── PAYMENT SYNC ─────────────────────────────────────────────────────────
   if (req.method === 'GET' && url.pathname === '/sync-payments') {
     const t0 = Date.now();
+    // Localhost only — every legitimate caller (Raycast script, the MCP
+    // sync_payments proxy, the dashboard via that proxy) hits localhost:3456
+    // directly, and the Cloudflare worker never forwards this path. Same rule
+    // as /portal-state: requests arriving through the public tunnel are
+    // refused so nobody outside this Mac can trigger payment recording.
+    {
+      const host = (req.headers.host || '').split(':')[0];
+      if (req.headers['cf-connecting-ip'] || (host !== 'localhost' && host !== '127.0.0.1')) {
+        res.writeHead(404);
+        res.end(JSON.stringify({ error: 'Not found' }));
+        return;
+      }
+    }
+    // dry_run=1 runs the full match + dedupe pipeline but records nothing:
+    // would-be payments come back with status "dry_run" instead.
+    const dryRun = url.searchParams.get('dry_run') === '1';
     (async () => {
       try {
         const NON_JOP  = new Set(['01dys6x70rk9b9v3jew7b49qk5','01e1f718r8p6d8nzasdn1zy4ar']);
@@ -843,10 +859,67 @@ const server = http.createServer(async (req, res) => {
 
         const VSCO_KEY = process.env.VSCO_API_KEY||'5a2ef52b-5a26-d3da-defa-dee9ce12-95e2da252851';
         const vscoHdr  = {'X-API-KEY':VSCO_KEY,'Content-Type':'application/json'};
+
+        // ── Idempotency: never record the same Zoho payment twice ──────────
+        // VSCO does NOT persist the memo we send (verified 2 Jul 2026: every
+        // auto-synced payment comes back memo:null), so the dedupe key is
+        // (jobId, amount, received date): if the job already has a payment of
+        // this exact amount on this exact date — however it was recorded —
+        // this invoice has already hit VSCO and is skipped. Protects against
+        // stale caches, invoice totals that don't zero the VSCO balance, and
+        // reruns after a failed apply step — all of which previously
+        // double-recorded. (~6 pages; only fetched when matches exist.)
+        const paymentsByJob = new Map(); // jobId → [{amount(pence), received}]
+        try {
+          let pPage = 1, pTotal = 1;
+          do {
+            const pr = await fetch(`https://workspace.vsco.co/api/v2/payment?limit=100&page=${pPage}`, { headers: vscoHdr });
+            if (!pr.ok) throw new Error(`payment list HTTP ${pr.status}`);
+            const pd = await pr.json();
+            for (const p of (pd.items || [])) {
+              if (!p.jobId) continue;
+              const list = paymentsByJob.get(p.jobId) || [];
+              list.push({ amount: p.amount || 0, received: String(p.received || '').slice(0, 10) });
+              paymentsByJob.set(p.jobId, list);
+            }
+            pTotal = pd.meta?.totalPages || 1;
+            pPage++;
+          } while (pPage <= pTotal);
+        } catch (err) {
+          // If existing payments can't be verified, do NOT record blind — a
+          // duplicate payment is worse than a delayed sync.
+          res.writeHead(502, {'Content-Type':'application/json'});
+          res.end(JSON.stringify({ error: `Could not verify existing VSCO payments (${err.message}) — sync aborted, nothing recorded.`, ms: Date.now()-t0 }));
+          return;
+        }
+
         const results  = [];
         for (const { inv, job } of matches) {
+          const amtPence = Math.round(inv.amount*100);
+          const invDate  = String(inv.date || '').slice(0, 10);
+          // Same amount within ±45 days counts as already recorded: manual
+          // recordings drift from Zoho's payment date (verified in live data),
+          // and a wrongly-skipped payment is visible + recoverable while a
+          // duplicate recording silently corrupts the balance. The window is
+          // tight enough not to catch coincidental same-amount payments from
+          // previous years (deposits, print orders).
+          const DATE_SLOP_MS = 45 * 24 * 60 * 60 * 1000;
+          const invT = Date.parse(invDate);
+          const existing = (paymentsByJob.get(job.id) || []).find(p => {
+            if (p.amount !== amtPence) return false;
+            const pT = Date.parse(p.received);
+            if (isNaN(invT) || isNaN(pT)) return invDate && p.received === invDate;
+            return Math.abs(pT - invT) <= DATE_SLOP_MS;
+          });
+          if (existing) {
+            results.push({job:job.displayName,amount:inv.amount,status:'skipped',reason:`£${inv.amount} already in VSCO (received ${existing.received}, Zoho date ${invDate})`});
+            continue;
+          }
+          if (dryRun) {
+            results.push({job:job.displayName,amount:inv.amount,status:'dry_run',invoice:inv.invoice_number});
+            continue;
+          }
           try {
-            const amtPence = Math.round(inv.amount*100);
             const ordRes   = await fetch(`https://tave.io/v2/job/${job.id}/order`,{headers:vscoHdr});
             const ordData  = await ordRes.json(); if (!(ordData.items||[]).length) throw new Error('No order');
             const orderId  = ordData.items[0].id;
@@ -858,7 +931,9 @@ const server = http.createServer(async (req, res) => {
           } catch(err) { results.push({job:job.displayName,amount:inv.amount,status:'failed',error:err.message}); }
         }
         const synced=results.filter(r=>r.status==='synced').length, failed=results.filter(r=>r.status==='failed').length;
-        res.writeHead(200,{'Content-Type':'application/json'}); res.end(JSON.stringify({synced,failed,results,ms:Date.now()-t0}));
+        const skipped=results.filter(r=>r.status==='skipped').length, wouldSync=results.filter(r=>r.status==='dry_run').length;
+        res.writeHead(200,{'Content-Type':'application/json'});
+        res.end(JSON.stringify(Object.assign({synced,failed,skipped}, dryRun?{dry_run:true,would_sync:wouldSync}:{}, {results,ms:Date.now()-t0})));
       } catch(err) { console.error('sync-payments error:',err.message); res.writeHead(500,{'Content-Type':'application/json'}); res.end(JSON.stringify({error:err.message})); }
     })(); return;
   }
