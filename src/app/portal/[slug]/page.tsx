@@ -43,6 +43,11 @@ export default async function PortalDashboard({
   // outside the portal) via the admin shot_list_completed flag.
   const shotListText = (client as Record<string, unknown>).shot_list_text as string | null
   const shotListManuallyComplete = (client as Record<string, unknown>).shot_list_completed as boolean ?? false
+  // Portal payment off + manually marked paid → treat the balance as settled on
+  // the dashboard card too, so a paid client isn't nagged about an outstanding balance.
+  const externalPaid =
+    ((client as Record<string, unknown>).payments_disabled as boolean ?? false) &&
+    !!((client as Record<string, unknown>).external_paid_at as string | null)
   const shotListComplete =
     shotListManuallyComplete ||
     (shotListItems?.length ?? 0) > 0 ||
@@ -158,6 +163,7 @@ export default async function PortalDashboard({
           slug={slug}
           daysUntil={daysUntil}
           href={`/portal/${slug}/invoices`}
+          externalPaid={externalPaid}
         />
         <SectionCard
           title="For Your Venue"

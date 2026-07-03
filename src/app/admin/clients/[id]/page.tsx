@@ -64,6 +64,7 @@ export default async function ClientDetailPage(props: { params: Promise<{ id: st
   const finalMeetingEnabled  = (client as Record<string, unknown>).final_meeting_enabled     as boolean ?? false
   const phoneCallEnabled     = (client as Record<string, unknown>).phone_call_enabled        as boolean ?? false
   const paymentsDisabled     = (client as Record<string, unknown>).payments_disabled          as boolean ?? false
+  const externalPaidAt       = (client as Record<string, unknown>).external_paid_at            as string | null ?? null
   const isAlbumPackage = !!(client.package_name && (
     client.package_name.toLowerCase().includes('album') ||
     client.package_name.toLowerCase().includes('frame')
@@ -271,6 +272,7 @@ export default async function ClientDetailPage(props: { params: Promise<{ id: st
             <PaymentsToggle
               clientId={client.id}
               paymentsDisabled={paymentsDisabled}
+              externalPaidAt={externalPaidAt}
             />
           </div>
         </section>
