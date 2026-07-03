@@ -15,7 +15,7 @@ export default async function InvoicesPage({
 
   const { data: client } = await admin
     .from('clients')
-    .select('id, wedding_date, payments_disabled')
+    .select('id, wedding_date, payments_disabled, external_paid_at')
     .eq('portal_slug', slug)
     .single()
 
@@ -34,6 +34,7 @@ export default async function InvoicesPage({
         slug={slug}
         weddingDate={client.wedding_date ?? null}
         paymentsDisabled={(client as { payments_disabled?: boolean }).payments_disabled ?? false}
+        externalPaidAt={(client as { external_paid_at?: string | null }).external_paid_at ?? null}
       />
     </div>
   )

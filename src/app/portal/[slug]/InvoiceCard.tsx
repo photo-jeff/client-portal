@@ -6,9 +6,10 @@ interface Props {
   slug: string
   daysUntil: number | null
   href: string
+  externalPaid?: boolean
 }
 
-export function InvoiceCard({ slug, daysUntil, href }: Props) {
+export function InvoiceCard({ slug, daysUntil, href, externalPaid = false }: Props) {
   const [outstanding, setOutstanding] = useState<number | null>(null)
   const [zohoPaid, setZohoPaid] = useState(false)
 
@@ -24,7 +25,7 @@ export function InvoiceCard({ slug, daysUntil, href }: Props) {
       .catch(() => {/* ignore */})
   }, [slug])
 
-  const hasBalance = !zohoPaid && outstanding !== null && outstanding > 0
+  const hasBalance = !externalPaid && !zohoPaid && outstanding !== null && outstanding > 0
   const isUrgent   = hasBalance && daysUntil !== null && daysUntil > 0 && daysUntil <= 42
 
   return (

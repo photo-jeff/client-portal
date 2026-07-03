@@ -60,7 +60,7 @@ function calcDueDate(weddingDate: string | null): string | null {
   return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })
 }
 
-export function InvoiceList({ slug, weddingDate, paymentsDisabled = false }: { slug: string; weddingDate: string | null; paymentsDisabled?: boolean }) {
+export function InvoiceList({ slug, weddingDate, paymentsDisabled = false, externalPaidAt = null }: { slug: string; weddingDate: string | null; paymentsDisabled?: boolean; externalPaidAt?: string | null }) {
   const [data, setData] = useState<BalanceData | undefined>(undefined)
   const [zoho, setZoho] = useState<ZohoData | undefined>(undefined)
   const [creating, setCreating] = useState(false)
@@ -113,6 +113,14 @@ export function InvoiceList({ slug, weddingDate, paymentsDisabled = false }: { s
   const outstanding = data?.outstanding ?? null
   const remaining = total !== null ? Math.max(0, total - DEPOSIT) : null
 
+  // Payment is off for this client (invoiced through the separate business) AND
+  // Jeff has manually marked that external invoice paid. VSCO's balance may not
+  // reflect it, so this flag is the source of truth for showing "Paid" here.
+  const externalPaid = paymentsDisabled && !!externalPaidAt
+  const externalPaidDate = externalPaidAt
+    ? new Date(externalPaidAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })
+    : null
+
   // VSCO's account balance is the source of truth for what's still owed. A paid
   // deposit invoice in Zoho must never zero this out.
   const displayOutstanding = outstanding
@@ -161,7 +169,9 @@ export function InvoiceList({ slug, weddingDate, paymentsDisabled = false }: { s
             : <span className="text-[#d0d3d6]">—</span>
         }
         sub={
-          displayOutstanding === 0
+          externalPaid
+            ? `Marked paid${externalPaidDate ? ` on ${externalPaidDate}` : ''} — thank you!`
+            : displayOutstanding === 0
             ? 'All paid — thank you!'
             : displayOutstanding !== null && displayOutstanding > 0
             ? (() => {
@@ -172,10 +182,19 @@ export function InvoiceList({ slug, weddingDate, paymentsDisabled = false }: { s
               })()
             : undefined
         }
-        status={displayOutstanding === 0 ? 'paid' : displayOutstanding !== null && displayOutstanding > 0 ? 'outstanding' : null}
+        status={externalPaid || displayOutstanding === 0 ? 'paid' : displayOutstanding !== null && displayOutstanding > 0 ? 'outstanding' : null}
       />
 
-      {!zohoLoading && displayOutstanding !== null && displayOutstanding > 0 && paymentsDisabled && (
+      {externalPaid && (
+        <div className="bg-[#f2f7f0] border border-[#cfe3c6] p-5 rounded-xl flex items-center gap-2">
+          <CheckCircle size={16} className="text-green-600 shrink-0" />
+          <p className="text-sm text-green-700 leading-relaxed">
+            Your final balance has been paid{externalPaidDate ? ` (received ${externalPaidDate})` : ''} — thank you! There&apos;s nothing more to pay.
+          </p>
+        </div>
+      )}
+
+      {!externalPaid && !zohoLoading && displayOutstanding !== null && displayOutstanding > 0 && paymentsDisabled && (
         <div className="bg-[#faf9f7] border border-[#e0ddd8] p-5 rounded-xl">
           <p className="text-xs tracking-[0.1em] uppercase text-[#919295] mb-2">How to pay</p>
           <p className="text-sm text-[#919295] leading-relaxed">
