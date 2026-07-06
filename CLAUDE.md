@@ -34,7 +34,7 @@ Requires `vsco_questionnaire_url` column on `clients` (applied in Supabase, not 
 
 ## Known issues
 
-1. **`vsco_job_id` stored as numeric** — `webhook.js:624` sends `payload.jobId` (numeric) instead of `vscoUlid`. Fix: `vsco_job_id: vscoUlid || payload.jobId`
+1. **VSCO ID dual-label matching (`cf_vsco_job_id` vs `cf_vsco_ulid`)** — the old `webhook.js:624` bug (stored the numeric `payload.jobId`) is already fixed; line 689 now sends `vsco_job_id: vscoUlid || payload.jobId`. As a result the VSCO ID lives in Zoho under two coexisting custom fields: legacy **"VSCO Job ID"** (`cf_vsco_job_id`) and modern **"VSCO ULID"** (`cf_vsco_ulid`) — a contact may have one, the other, or both, and contacts created since the fix have only "VSCO ULID". Any code that reads a VSCO ID off a Zoho invoice/contact (e.g. `/sync-payments` in `scripts/webhook.js`) must match **both** labels, or modern contacts' payments are silently skipped.
 2. **Package/collection always null** — Cloudflare email only has 6 fields; need VSCO API fetch post-lookup to enrich
 3. **Chat wizards: messages start with assistant role** — hidden opening user message is filtered from API payload. Fix: keep hidden messages in API call, hidden flag is UI-only
 4. **`/api/portal/chat/route.ts` model** — still `claude-3-haiku-20240307` (deprecated). Use `claude-3-5-sonnet-20241022`

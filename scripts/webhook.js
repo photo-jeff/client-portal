@@ -818,9 +818,14 @@ const server = http.createServer(async (req, res) => {
             if ((inv.total||0) <= 600) continue;
             const payDate = inv.last_payment_date || inv.date || '';
             if (payDate && payDate < sinceStr) continue;
-            // Pull VSCO Job ID from invoice custom field (may be ULID or numeric)
-            // Falls back to contact-level lookup later if not set on the invoice
-            const vscoJobId = (inv.custom_fields || []).find(f => f.label === 'VSCO Job ID')?.value || '';
+            // The VSCO ID may live in either of two Zoho custom fields that
+            // coexist: the legacy "VSCO Job ID" (cf_vsco_job_id) or the modern
+            // "VSCO ULID" (cf_vsco_ulid). A contact may carry one, the other, or
+            // both — contacts created since the webhook fix have only "VSCO ULID",
+            // so we must accept either label or their payments are silently skipped.
+            // Falls back to contact-level lookup later if neither is set here.
+            const vscoJobId = (inv.custom_fields || [])
+              .find(f => f.label === 'VSCO Job ID' || f.label === 'VSCO ULID')?.value || '';
             zohoInvoices.push({ customer_name: inv.customer_name, amount: inv.total, date: payDate, invoice_number: inv.invoice_number, vscoJobId, customer_id: inv.customer_id });
           }
           const oldest = invoices[invoices.length-1]; const od = oldest?.last_payment_date||oldest?.date||'';
@@ -841,7 +846,10 @@ const server = http.createServer(async (req, res) => {
                 const token = await getAccessToken();
                 const cr = await fetch(`${ZOHO_BASE}/contacts/${inv.customer_id}?organization_id=${ZOHO_ORG}`, { headers: { Authorization: `Zoho-oauthtoken ${token}` } });
                 const cd = await cr.json();
-                const contactField = (cd.contact?.custom_fields || []).find(f => f.label === 'VSCO Job ID');
+                // Same dual-label rule as the invoice lookup above: accept either
+                // the legacy "VSCO Job ID" or the modern "VSCO ULID" custom field.
+                const contactField = (cd.contact?.custom_fields || [])
+                  .find(f => f.label === 'VSCO Job ID' || f.label === 'VSCO ULID');
                 contactJobIdCache.set(inv.customer_id, contactField?.value || '');
               } catch(e) {
                 contactJobIdCache.set(inv.customer_id, '');
