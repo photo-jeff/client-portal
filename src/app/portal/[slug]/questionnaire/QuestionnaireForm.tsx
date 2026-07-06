@@ -20,6 +20,12 @@ interface Props {
 
 const STEPS = ['Your Day', 'The Fun Stuff', 'Your Suppliers']
 
+// VSCO's questionnaire text inputs cap at 255 characters. Mirror that limit on
+// every free-text field here so the portal answers can never exceed what VSCO
+// stores — keeping the two in sync and avoiding the "form validation failed"
+// error VSCO throws when a submitted value is over-length (see vsco-questionnaire.ts).
+const VSCO_TEXT_MAX = 255
+
 function firstName(fullName: string): string {
   return fullName.trim().split(/\s+/)[0] || fullName
 }
@@ -221,7 +227,6 @@ export function QuestionnaireForm({
     cake: '',
     videographer: '',
     stationery: '',
-    catering: '',
     transport: '',
     dj_band: '',
     photo_booth: '',
@@ -471,6 +476,7 @@ export function QuestionnaireForm({
               value={data.emergency_contact as string}
               onChange={e => update('emergency_contact', e.target.value)}
               placeholder="Name and mobile number"
+              maxLength={VSCO_TEXT_MAX}
             />
           </>
         )}
@@ -488,36 +494,42 @@ export function QuestionnaireForm({
                   value={data.names_for_slideshow as string}
                   onChange={e => update('names_for_slideshow', e.target.value)}
                   hint="e.g. Emma & James, or Ems & J"
+                  maxLength={VSCO_TEXT_MAX}
                 />
                 <Input
                   label={`Who is walking ${firstName(partner1)} down the aisle?`}
                   value={data.aisle_escort as string}
                   onChange={e => update('aisle_escort', e.target.value)}
                   placeholder="Name (or 'Walking alone / together')"
+                  maxLength={VSCO_TEXT_MAX}
                 />
                 <Input
                   label="What's your first dance song?"
                   value={data.first_dance_song as string}
                   onChange={e => update('first_dance_song', e.target.value)}
                   placeholder="Artist — Song title"
+                  maxLength={VSCO_TEXT_MAX}
                 />
                 <Input
                   label="Will it be choreographed or keeping it natural?"
                   value={data.choreographed_dance as string}
                   onChange={e => update('choreographed_dance', e.target.value)}
                   placeholder="Natural / Choreographed routine"
+                  maxLength={VSCO_TEXT_MAX}
                 />
                 <Textarea
                   label="Any special moments or surprises we should know about?"
                   value={data.unique_elements as string}
                   onChange={e => update('unique_elements', e.target.value)}
                   placeholder="Unusual traditions, special elements in the ceremony, anything that'll make us go 'oh wow'…"
+                  maxLength={VSCO_TEXT_MAX}
                 />
                 <Input
                   label="Honeymoon plans? (Purely curiosity — no obligation!)"
                   value={data.honeymoon_plans as string}
                   onChange={e => update('honeymoon_plans', e.target.value)}
                   placeholder="Where and when?"
+                  maxLength={VSCO_TEXT_MAX}
                 />
               </div>
             </div>
@@ -531,6 +543,7 @@ export function QuestionnaireForm({
                   value={data.social_media as string}
                   onChange={e => update('social_media', e.target.value)}
                   placeholder="@yourinsta or just tell us the platform you use"
+                  maxLength={VSCO_TEXT_MAX}
                 />
                 <Input
                   label="Got a wedding hashtag?"
@@ -538,6 +551,7 @@ export function QuestionnaireForm({
                   onChange={e => update('hashtag', e.target.value)}
                   placeholder="#YourWeddingHashtag"
                   hint="No pressure if you haven't decided yet"
+                  maxLength={VSCO_TEXT_MAX}
                 />
               </div>
             </div>
@@ -561,28 +575,28 @@ export function QuestionnaireForm({
             )}
 
             <div className="grid sm:grid-cols-2 gap-5">
-              <Input label="Venue coordinator" value={data.venue_contact as string} onChange={e => update('venue_contact', e.target.value)} placeholder="Name + email or phone" />
-              <Input label="Wedding planner" value={data.wedding_planner as string} onChange={e => update('wedding_planner', e.target.value)} placeholder="Name + @instagram" />
-              <Input label={`${firstName(partner1)}'s dress`} value={data.wedding_dress as string} onChange={e => update('wedding_dress', e.target.value)} placeholder="Designer & boutique" />
-              <Input label={`${firstName(partner2)}'s suit`} value={data.groom_suit as string} onChange={e => update('groom_suit', e.target.value)} placeholder="Designer & shop" />
-              <Input label="Make-up artist(s)" value={data.makeup_artist as string} onChange={e => update('makeup_artist', e.target.value)} placeholder="Name + @instagram" />
-              <Input label="Hair stylist" value={data.hair_stylist as string} onChange={e => update('hair_stylist', e.target.value)} placeholder="Name + @instagram" />
-              <Input label="Florist" value={data.florist as string} onChange={e => update('florist', e.target.value)} placeholder="Name + @instagram" />
-              <Input label="Venue styling" value={data.venue_styling as string} onChange={e => update('venue_styling', e.target.value)} placeholder="Name + @instagram" />
-              <Input label="Cake" value={data.cake as string} onChange={e => update('cake', e.target.value)} placeholder="Name + @instagram" />
-              <Input label="Videographer" value={data.videographer as string} onChange={e => update('videographer', e.target.value)} placeholder="Name + @instagram" />
-              <Input label="Stationery" value={data.stationery as string} onChange={e => update('stationery', e.target.value)} placeholder="Name + @instagram" />
-              <Input label="Catering" value={data.catering as string} onChange={e => update('catering', e.target.value)} placeholder="Name + @instagram" />
-              <Input label="Cars / transport" value={data.transport as string} onChange={e => update('transport', e.target.value)} placeholder="Name + @instagram" />
-              <Input label="DJ or band" value={data.dj_band as string} onChange={e => update('dj_band', e.target.value)} placeholder="Name + @instagram" />
-              <Input label="Photo booth" value={data.photo_booth as string} onChange={e => update('photo_booth', e.target.value)} placeholder="Name + @instagram" />
-              <Input label="Jeweller" value={data.jeweller as string} onChange={e => update('jeweller', e.target.value)} placeholder="Name + @instagram" />
+              <Input label="Venue coordinator" value={data.venue_contact as string} onChange={e => update('venue_contact', e.target.value)} placeholder="Name + email or phone" maxLength={VSCO_TEXT_MAX} />
+              <Input label="Wedding planner" value={data.wedding_planner as string} onChange={e => update('wedding_planner', e.target.value)} placeholder="Name + @instagram" maxLength={VSCO_TEXT_MAX} />
+              <Input label={`${firstName(partner1)}'s dress`} value={data.wedding_dress as string} onChange={e => update('wedding_dress', e.target.value)} placeholder="Designer & boutique" maxLength={VSCO_TEXT_MAX} />
+              <Input label={`${firstName(partner2)}'s suit`} value={data.groom_suit as string} onChange={e => update('groom_suit', e.target.value)} placeholder="Designer & shop" maxLength={VSCO_TEXT_MAX} />
+              <Input label="Make-up artist(s)" value={data.makeup_artist as string} onChange={e => update('makeup_artist', e.target.value)} placeholder="Name + @instagram" maxLength={VSCO_TEXT_MAX} />
+              <Input label="Hair stylist" value={data.hair_stylist as string} onChange={e => update('hair_stylist', e.target.value)} placeholder="Name + @instagram" maxLength={VSCO_TEXT_MAX} />
+              <Input label="Florist" value={data.florist as string} onChange={e => update('florist', e.target.value)} placeholder="Name + @instagram" maxLength={VSCO_TEXT_MAX} />
+              <Input label="Venue styling" value={data.venue_styling as string} onChange={e => update('venue_styling', e.target.value)} placeholder="Name + @instagram" maxLength={VSCO_TEXT_MAX} />
+              <Input label="Cake" value={data.cake as string} onChange={e => update('cake', e.target.value)} placeholder="Name + @instagram" maxLength={VSCO_TEXT_MAX} />
+              <Input label="Videographer" value={data.videographer as string} onChange={e => update('videographer', e.target.value)} placeholder="Name + @instagram" maxLength={VSCO_TEXT_MAX} />
+              <Input label="Stationery" value={data.stationery as string} onChange={e => update('stationery', e.target.value)} placeholder="Name + @instagram" maxLength={VSCO_TEXT_MAX} />
+              <Input label="Cars / transport" value={data.transport as string} onChange={e => update('transport', e.target.value)} placeholder="Name + @instagram" maxLength={VSCO_TEXT_MAX} />
+              <Input label="DJ or band" value={data.dj_band as string} onChange={e => update('dj_band', e.target.value)} placeholder="Name + @instagram" maxLength={VSCO_TEXT_MAX} />
+              <Input label="Photo booth" value={data.photo_booth as string} onChange={e => update('photo_booth', e.target.value)} placeholder="Name + @instagram" maxLength={VSCO_TEXT_MAX} />
+              <Input label="Jeweller" value={data.jeweller as string} onChange={e => update('jeweller', e.target.value)} placeholder="Name + @instagram" maxLength={VSCO_TEXT_MAX} />
             </div>
             <Textarea
               label="Anyone else we should know about?"
               value={data.additional_vendors as string}
               onChange={e => update('additional_vendors', e.target.value)}
               placeholder="Any other vendors, services, or people who made the day happen"
+              maxLength={VSCO_TEXT_MAX}
             />
           </>
         )}

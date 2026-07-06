@@ -90,6 +90,17 @@ function extractCsrf(html: string): string | null {
   return csrfTag?.[0].match(/value="([^"]+)"/)?.[1] ?? null
 }
 
+// VSCO text inputs enforce a maxlength (usually 255). Submitting a longer value
+// fails server-side validation for the WHOLE page with the generic "Please
+// complete all required fields" message — so one over-long answer (e.g. a
+// detailed "unique elements" note) silently breaks the entire sync. Clamp each
+// value to the field's own maxlength so the form always validates.
+function getMaxLength(html: string, fieldId: string): number | null {
+  const tag = html.match(new RegExp(`<input[^>]*name="${fieldId}"[^>]*>`))
+  const ml = tag?.[0].match(/maxlength="(\d+)"/)
+  return ml ? parseInt(ml[1], 10) : null
+}
+
 function buildParams(html: string, data: Record<string, string>): URLSearchParams {
   const params = new URLSearchParams()
   const SYSTEM_FIELDS = new Set(['csrf', 'FormState', 'FormBetas', 'FormAction', 'Continue', 'Save', 'Delete', 'Cancel'])
@@ -156,9 +167,12 @@ function buildParams(html: string, data: Record<string, string>): URLSearchParam
     params.set(vscoId, toVscoTime(data[ourField]))
   }
 
-  // Plain text fields
+  // Plain text fields — clamped to VSCO's per-field maxlength (see getMaxLength)
   for (const [ourField, vscoId] of Object.entries(TEXT_FIELDS)) {
-    params.set(vscoId, data[ourField] ?? '')
+    let value = data[ourField] ?? ''
+    const max = getMaxLength(html, vscoId)
+    if (max && value.length > max) value = value.slice(0, max)
+    params.set(vscoId, value)
   }
 
   // Hot meal checkbox (only sent when yes)

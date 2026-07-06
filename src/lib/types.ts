@@ -45,7 +45,6 @@ export interface QuestionnaireData {
   cake: string
   videographer: string
   stationery: string
-  catering: string
   transport: string
   dj_band: string
   photo_booth: string
