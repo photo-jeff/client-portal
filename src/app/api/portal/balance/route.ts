@@ -22,7 +22,11 @@ export async function GET(request: NextRequest) {
         'X-API-KEY': process.env.VSCO_API_KEY!,
         'Content-Type': 'application/json',
       },
-      next: { revalidate: 3600 },
+      // Short cache: clients act on this figure and expect it to reflect a
+      // payment quickly. VSCO's balance is only refreshed when a payment is
+      // recorded (via /sync-payments), so a long TTL left the portal showing an
+      // already-paid balance as outstanding for up to an hour.
+      next: { revalidate: 60 },
     })
 
     if (!res.ok) return NextResponse.json({ total: null, outstanding: null })
