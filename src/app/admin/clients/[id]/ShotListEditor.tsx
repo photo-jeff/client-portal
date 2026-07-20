@@ -27,7 +27,7 @@ export function ShotListEditor({ clientId, initialText }: Props) {
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || `Save failed (${res.status})`)
-      setStatus(data.vscoSynced ? 'Saved ✓ — re-sent to VSCO' : 'Saved ✓')
+      setStatus('Saved ✓')
       setEditing(false)
       startTransition(() => router.refresh())
     } catch (e) {
@@ -88,7 +88,7 @@ export function ShotListEditor({ clientId, initialText }: Props) {
         {status && <span className="text-xs text-red-500">{status}</span>}
       </div>
       <p className="mt-2 text-xs text-[#aaa]">
-        Saving replaces the stored list, updates what the couple sees in the portal, and re-sends to VSCO if a shot list URL is set.
+        Saving replaces the stored list and updates what the couple sees in the portal. Nothing is sent to VSCO.
       </p>
     </div>
   )

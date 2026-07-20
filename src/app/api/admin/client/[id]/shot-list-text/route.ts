@@ -1,12 +1,11 @@
 import { createClient } from '@/lib/supabase/server'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { NextRequest, NextResponse } from 'next/server'
-import { submitVscoShotList } from '@/lib/vsco-shot-list'
 
 // POST { text: string }
 // Amend or replace a client's saved shot list (e.g. after the final details
-// meeting changes it). Re-pushes to VSCO when a shot list URL is set, same as
-// the portal wizard's save.
+// meeting changes it). Deliberately does NOT re-push to VSCO — the portal
+// wizard's save is the only path that submits there.
 
 export async function POST(request: NextRequest, props: { params: Promise<{ id: string }> }) {
   const { id } = await props.params
@@ -29,24 +28,5 @@ export async function POST(request: NextRequest, props: { params: Promise<{ id: 
     .eq('id', id)
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-
-  const { data: client } = await admin
-    .from('clients')
-    .select('vsco_shot_list_url')
-    .eq('id', id)
-    .single()
-
-  const vscoUrl = (client as Record<string, unknown> | null)?.vsco_shot_list_url as string | null
-  let vscoSynced = false
-  if (vscoUrl) {
-    try {
-      await submitVscoShotList(vscoUrl, text.trim())
-      vscoSynced = true
-    } catch (e) {
-      // The list is already saved in Supabase — report the sync failure, don't fail the save
-      console.error(`[shot-list] admin VSCO submission failed for client ${id}:`, e)
-    }
-  }
-
-  return NextResponse.json({ ok: true, vscoSynced })
+  return NextResponse.json({ ok: true })
 }
