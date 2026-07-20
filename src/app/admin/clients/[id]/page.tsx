@@ -10,6 +10,7 @@ import { InviteButton } from './InviteButton'
 import { PrewedOverride } from './PrewedOverride'
 import { MeetingOverrides } from './MeetingOverrides'
 import { ShotListComplete } from './ShotListComplete'
+import { ShotListEditor } from './ShotListEditor'
 import { ResyncQuestionnaire } from './ResyncQuestionnaire'
 import { PaymentsToggle } from './PaymentsToggle'
 
@@ -203,13 +204,7 @@ export default async function ClientDetailPage(props: { params: Promise<{ id: st
             )}
           </div>
           <Divider />
-          {shotListText ? (
-            <pre className="mt-6 text-sm text-[#1a1a1a] whitespace-pre-wrap leading-relaxed font-sans">
-              {shotListText}
-            </pre>
-          ) : (
-            <p className="mt-6 text-sm text-[#888]">Client hasn&apos;t completed their shot list in the portal.</p>
-          )}
+          <ShotListEditor clientId={client.id} initialText={shotListText} />
 
           <div className="mt-6 pt-6 border-t border-[#f0ede8]">
             <p className="text-xs text-[#aaa] mb-3">
