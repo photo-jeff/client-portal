@@ -10,8 +10,8 @@ export default async function ArchivePage() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user || user.email !== 'mrjeffoliver@gmail.com') redirect('/login')
 
-  // Portals archived = wedding date > 10 weeks ago
-  const archiveThreshold = new Date(Date.now() - 70 * 86_400_000).toISOString().split('T')[0]
+  // Portals archived = wedding date > 1 week ago
+  const archiveThreshold = new Date(Date.now() - 7 * 86_400_000).toISOString().split('T')[0]
 
   const admin = createAdminClient()
   const { data: clients } = await admin
@@ -38,8 +38,8 @@ export default async function ArchivePage() {
           <h2 className="font-serif text-3xl mb-2">Archived Portals</h2>
           <Divider />
           <p className="text-sm text-[#919295] mt-4">
-            Portals move here automatically 10 weeks after the wedding date.
-            Select and delete in bulk once you&apos;ve confirmed galleries are delivered.
+            Portals move here automatically a week after the wedding date, and are deleted
+            automatically 3 months later. Select and delete in bulk any time once galleries are delivered.
           </p>
         </div>
 

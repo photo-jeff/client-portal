@@ -63,6 +63,12 @@ export default async function PortalDashboard({
     ? Math.ceil((new Date(client.wedding_date).getTime() - Date.now()) / 86400000)
     : null
 
+  // Gallery delivery estimate — 8 weeks after the wedding (same rule as the FAQ page)
+  const photosReadyBy = client.wedding_date
+    ? new Date(new Date(client.wedding_date).getTime() + 8 * 7 * 24 * 60 * 60 * 1000)
+        .toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })
+    : null
+
   // Pre-wedding shoot visibility
   const isAlbumPackage = !!(client.package_name && (
     client.package_name.toLowerCase().includes('album') ||
@@ -73,6 +79,10 @@ export default async function PortalDashboard({
   const prewedOverride      = (client as Record<string, unknown>).prewedding_override        as string | null ?? null
   const finalMeetingEnabled = (client as Record<string, unknown>).final_meeting_enabled      as boolean ?? false
   const phoneCallEnabled    = (client as Record<string, unknown>).phone_call_enabled         as boolean ?? false
+  const finalMeetingAt      = (client as Record<string, unknown>).final_meeting_at            as string | null ?? null
+  const finalMeetingReschedule = (client as Record<string, unknown>).final_meeting_reschedule_url as string | null ?? null
+  const phoneCallAt         = (client as Record<string, unknown>).phone_call_at               as string | null ?? null
+  const phoneCallReschedule = (client as Record<string, unknown>).phone_call_reschedule_url   as string | null ?? null
 
   const shootInPast    = shootAt ? new Date(shootAt) < new Date() : false
   const datesOk        = daysUntil !== null && daysUntil > 0 && !shootInPast
@@ -109,6 +119,11 @@ export default async function PortalDashboard({
             What a day — thank you for having us
           </p>
         )}
+        {photosReadyBy && (
+          <p className="text-xs tracking-[0.1em] uppercase text-[#b5b8ba] mt-1">
+            Photos Ready By — {photosReadyBy}
+          </p>
+        )}
       </div>
 
       {/* Pre-wedding shoot */}
@@ -122,10 +137,20 @@ export default async function PortalDashboard({
 
       {/* Final meeting or phone call booking */}
       {finalMeetingEnabled && (
-        <MeetingCard type="final_meeting" slug={slug} />
+        <MeetingCard
+          type="final_meeting"
+          slug={slug}
+          meetingAt={finalMeetingAt}
+          rescheduleUrl={finalMeetingReschedule}
+        />
       )}
       {phoneCallEnabled && (
-        <MeetingCard type="phone_call" slug={slug} />
+        <MeetingCard
+          type="phone_call"
+          slug={slug}
+          meetingAt={phoneCallAt}
+          rescheduleUrl={phoneCallReschedule}
+        />
       )}
 
       {/* Sections */}

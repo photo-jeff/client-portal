@@ -15,7 +15,7 @@ export default async function FaqPage({
 
   const [{ data: client }, { data: blocks }] = await Promise.all([
     admin.from('clients').select('id, wedding_date').eq('portal_slug', slug).single(),
-    admin.from('faq_blocks').select('title, content').order('sort_order'),
+    admin.from('faq_blocks').select('title, subtitle, content').order('sort_order'),
   ])
 
   if (!client) notFound()
@@ -27,6 +27,7 @@ export default async function FaqPage({
 
   const items = (blocks ?? []).map(b => ({
     title: b.title,
+    subtitle: (b as { subtitle?: string | null }).subtitle ?? null,
     content: b.content.replace(/\{\{delivery_date\}\}/g, deliveryDate),
   }))
 

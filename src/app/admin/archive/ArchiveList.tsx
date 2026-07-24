@@ -58,7 +58,7 @@ export function ArchiveList({ clients }: { clients: Client[] }) {
   if (clients.length === 0) {
     return (
       <p className="p-8 text-center text-sm text-[#888]">
-        No archived portals yet — portals move here automatically 10 weeks after the wedding date.
+        No archived portals yet — portals move here automatically a week after the wedding date.
       </p>
     )
   }
