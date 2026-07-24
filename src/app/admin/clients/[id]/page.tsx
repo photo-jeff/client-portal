@@ -6,7 +6,7 @@ import { Divider } from '@/components/ui/Divider'
 import { Button } from '@/components/ui/Button'
 import { ClientIdFields } from './ClientIdFields'
 import { DeleteClientButton } from './DeleteClientButton'
-import { InviteButton } from './InviteButton'
+import { PortalSentToggle } from './PortalSentToggle'
 import { PrewedOverride } from './PrewedOverride'
 import { MeetingOverrides } from './MeetingOverrides'
 import { ShotListComplete } from './ShotListComplete'
@@ -25,8 +25,8 @@ export default async function ClientDetailPage(props: { params: Promise<{ id: st
   const { data: client } = await admin.from('clients').select('*').eq('id', id).single()
   if (!client) notFound()
 
-  // Prev/next in same order as admin list (wedding_date asc, past > 10 weeks excluded)
-  const archiveThreshold = new Date(Date.now() - 70 * 86_400_000).toISOString().split('T')[0]
+  // Prev/next in same order as admin list (wedding_date asc, past > 1 week excluded)
+  const archiveThreshold = new Date(Date.now() - 7 * 86_400_000).toISOString().split('T')[0]
   const { data: allClients } = await admin
     .from('clients')
     .select('id')
@@ -145,14 +145,15 @@ export default async function ClientDetailPage(props: { params: Promise<{ id: st
               </Link>
             </div>
           </div>
-          {client.invite_sent_at && (
-            <div className="mt-4 text-sm">
-              <span className="text-xs tracking-[0.1em] uppercase text-[#888]">Invite sent</span>
-              <div className="mt-1">
-                {new Date(client.invite_sent_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
-              </div>
-            </div>
-          )}
+          <div className="mt-6 pt-4 border-t border-[#f0ede8]">
+            <PortalSentToggle
+              clientId={client.id}
+              inviteSentAt={client.invite_sent_at ?? null}
+            />
+            <p className="text-xs text-[#aaa] mt-2">
+              Tick once you&apos;ve sent the portal link to the couple.
+            </p>
+          </div>
         </section>
 
         {/* Questionnaire */}
@@ -295,14 +296,6 @@ export default async function ClientDetailPage(props: { params: Promise<{ id: st
             <DeleteClientButton
               clientId={client.id}
               clientName={`${client.partner1_name} & ${client.partner2_name}`}
-            />
-          </div>
-          <div className="bg-white border border-[#e0ddd8] p-6 rounded-2xl">
-            <h3 className="text-xs tracking-[0.1em] uppercase text-[#888] mb-3">Send portal invite</h3>
-            <InviteButton
-              clientId={client.id}
-              email={client.email ?? null}
-              inviteSentAt={client.invite_sent_at ?? null}
             />
           </div>
         </section>

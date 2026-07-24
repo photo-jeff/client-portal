@@ -5,38 +5,51 @@ import Link from 'next/link'
 
 type Client = Record<string, unknown>
 
-function SendInviteCell({ client }: { client: Client }) {
-  const [sending, setSending] = useState(false)
+function PortalSentCell({ client }: { client: Client }) {
   const [sentAt, setSentAt] = useState(client.invite_sent_at as string | null)
+  const [saving, setSaving] = useState(false)
 
-  async function send(e: React.MouseEvent) {
+  async function toggle(e: React.MouseEvent | React.ChangeEvent) {
     e.stopPropagation()
-    if (!client.email || sending) return
-    setSending(true)
+    if (saving) return
+    const prev = sentAt
+    const next = !sentAt
+    setSaving(true)
+    setSentAt(next ? new Date().toISOString() : null)  // optimistic
     try {
-      const res = await fetch(`/api/admin/client/${client.id as string}/send-invite`, { method: 'POST' })
-      if (res.ok) setSentAt(new Date().toISOString())
+      const res = await fetch(`/api/admin/client/${client.id as string}/portal-sent`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ sent: next }),
+      })
+      const json = await res.json()
+      if (!res.ok) throw new Error()
+      setSentAt(json.invite_sent_at)
+    } catch {
+      setSentAt(prev)  // revert
     } finally {
-      setSending(false)
+      setSaving(false)
     }
   }
 
-  if (sentAt) {
-    return (
-      <span className="text-[#888]" title={new Date(sentAt).toLocaleString('en-GB')}>
-        ✓ {new Date(sentAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
-      </span>
-    )
-  }
-
   return (
-    <button
-      onClick={send}
-      disabled={sending || !client.email}
-      className="text-xs tracking-[0.06em] uppercase text-[#C9A96E] hover:underline disabled:text-[#ccc] disabled:cursor-not-allowed"
+    <label
+      className="inline-flex items-center gap-2 cursor-pointer select-none"
+      onClick={e => e.stopPropagation()}
     >
-      {sending ? 'Sending…' : 'Send invite'}
-    </button>
+      <input
+        type="checkbox"
+        checked={!!sentAt}
+        onChange={toggle}
+        disabled={saving}
+        className="w-4 h-4 accent-[#535353] cursor-pointer"
+      />
+      {sentAt && (
+        <span className="text-xs text-[#888]" title={new Date(sentAt).toLocaleString('en-GB')}>
+          {new Date(sentAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
+        </span>
+      )}
+    </label>
   )
 }
 
@@ -79,7 +92,7 @@ export function AdminClientList({ clients }: { clients: Client[] }) {
                 <th className="text-left px-6 py-3 text-xs tracking-[0.1em] uppercase text-[#888] font-medium">Couple</th>
                 <th className="text-left px-6 py-3 text-xs tracking-[0.1em] uppercase text-[#888] font-medium">Email</th>
                 <th className="text-left px-6 py-3 text-xs tracking-[0.1em] uppercase text-[#888] font-medium">Wedding date</th>
-                <th className="text-left px-6 py-3 text-xs tracking-[0.1em] uppercase text-[#888] font-medium">Invite</th>
+                <th className="text-left px-6 py-3 text-xs tracking-[0.1em] uppercase text-[#888] font-medium">Portal sent</th>
                 <th className="px-6 py-3"></th>
               </tr>
             </thead>
@@ -101,7 +114,7 @@ export function AdminClientList({ clients }: { clients: Client[] }) {
                     {c.wedding_date ? new Date(c.wedding_date as string).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : '—'}
                   </td>
                   <td className="px-6 py-4">
-                    <SendInviteCell client={c} />
+                    <PortalSentCell client={c} />
                   </td>
                   <td className="px-6 py-4 text-right">
                     <Link href={`/admin/clients/${c.id as string}`} className="text-xs tracking-[0.08em] uppercase underline hover:no-underline">

@@ -5,11 +5,13 @@ interface FaqBlock {
   id: number
   sort_order: number
   title: string
+  subtitle: string | null
   content: string
 }
 
 function BlockEditor({ block }: { block: FaqBlock }) {
   const [value, setValue] = useState(block.content)
+  const [subtitle, setSubtitle] = useState(block.subtitle ?? '')
   const [status, setStatus] = useState<'idle' | 'saving' | 'saved'>('idle')
 
   async function save() {
@@ -19,6 +21,18 @@ function BlockEditor({ block }: { block: FaqBlock }) {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ content: value }),
+    })
+    setStatus('saved')
+    setTimeout(() => setStatus('idle'), 2000)
+  }
+
+  async function saveSubtitle() {
+    if (subtitle === (block.subtitle ?? '')) return
+    setStatus('saving')
+    await fetch(`/api/admin/faq/${block.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ subtitle }),
     })
     setStatus('saved')
     setTimeout(() => setStatus('idle'), 2000)
@@ -35,6 +49,14 @@ function BlockEditor({ block }: { block: FaqBlock }) {
           {status === 'saved' && <span className="text-green-600">Saved ✓</span>}
         </span>
       </div>
+      <input
+        type="text"
+        value={subtitle}
+        onChange={e => { setSubtitle(e.target.value); setStatus('idle') }}
+        onBlur={saveSubtitle}
+        placeholder="Sub-text shown under the heading…"
+        className="w-full text-sm text-[#535353] border border-[#e0ddd8] rounded-lg px-3 py-2 mb-3 focus:outline-none focus:border-[#C9A96E] bg-[#faf9f7]"
+      />
       <textarea
         value={value}
         onChange={e => { setValue(e.target.value); setStatus('idle') }}

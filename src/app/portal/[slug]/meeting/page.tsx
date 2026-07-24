@@ -13,12 +13,16 @@ const MEETING_CONFIG = {
     subtitle: 'A chance to go over everything before the big day.',
     urlKey: 'final_meeting_calendly_url',
     label: 'Final Details Meeting',
+    atKey: 'final_meeting_at',
+    rescheduleKey: 'final_meeting_reschedule_url',
   },
   phone_call: {
     title: 'Phone Call',
     subtitle: 'A quick call to answer any questions as the day approaches.',
     urlKey: 'phone_call_calendly_url',
     label: 'Phone Call',
+    atKey: 'phone_call_at',
+    rescheduleKey: 'phone_call_reschedule_url',
   },
 }
 
@@ -54,6 +58,9 @@ export default async function MeetingPage({
 
   const calendlyUrl = rows?.value ?? ''
 
+  const meetingAt = (client as Record<string, unknown>)[config.atKey] as string | null ?? null
+  const rescheduleUrl = (client as Record<string, unknown>)[config.rescheduleKey] as string | null ?? null
+
   const partnerName = `${client.partner1_name}${client.partner2_name ? ` & ${client.partner2_name}` : ''}`
 
   return (
@@ -76,7 +83,10 @@ export default async function MeetingPage({
         partnerName={partnerName}
         clientEmail={client.email ?? null}
         slug={slug}
+        meetingType={meetingType}
         label={config.label}
+        meetingAt={meetingAt}
+        rescheduleUrl={rescheduleUrl}
       />
     </div>
   )

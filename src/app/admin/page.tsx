@@ -10,8 +10,8 @@ export default async function AdminPage() {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user || user.email !== 'mrjeffoliver@gmail.com') redirect('/login')
 
-  // Active portals = wedding date is null OR in the future, or within the last 10 weeks
-  const archiveThreshold = new Date(Date.now() - 70 * 86_400_000).toISOString().split('T')[0]
+  // Active portals = wedding date is null OR in the future, or within the last week
+  const archiveThreshold = new Date(Date.now() - 7 * 86_400_000).toISOString().split('T')[0]
 
   const admin = createAdminClient()
   const { data: clients } = await admin

@@ -1,6 +1,7 @@
 import { notFound } from 'next/navigation'
 import { createAdminClient } from '@/lib/supabase/admin'
 import { PortalNav } from '@/components/portal/PortalNav'
+import { PortalFooter } from '@/components/portal/PortalFooter'
 
 export default async function PortalLayout({
   children,
@@ -28,6 +29,7 @@ export default async function PortalLayout({
       <main className="max-w-5xl mx-auto px-6 py-12">
         {children}
       </main>
+      <PortalFooter />
     </div>
   )
 }
