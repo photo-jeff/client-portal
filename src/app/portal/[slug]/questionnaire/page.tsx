@@ -4,6 +4,7 @@ import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { ChevronLeft } from 'lucide-react'
 import { QuestionnaireForm } from './QuestionnaireForm'
+import { getCoupleType } from '@/lib/couple-type'
 
 export default async function QuestionnairePage({
   params,
@@ -48,6 +49,7 @@ export default async function QuestionnairePage({
         slug={slug}
         partner1={client.partner1_name}
         partner2={client.partner2_name}
+        coupleType={getCoupleType(client)}
         ceremonyVenue={client.ceremony_venue ?? null}
         ceremonyTime={client.ceremony_time ?? null}
         receptionVenue={client.reception_venue ?? null}

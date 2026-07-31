@@ -39,8 +39,6 @@ export default async function ShotListPage({
         slug={slug}
         partner1={client.partner1_name}
         partner2={client.partner2_name}
-        partner1Role={(client as Record<string, unknown>).partner1_role as string ?? 'Bride'}
-        partner2Role={(client as Record<string, unknown>).partner2_role as string ?? 'Groom'}
         weddingDate={client.wedding_date ?? null}
         existingList={existingList}
       />

@@ -1,16 +1,18 @@
 import { createAdminClient } from '@/lib/supabase/admin'
 import { NextRequest, NextResponse } from 'next/server'
+import { type CoupleType, getCoupleType, asksHairAndMakeup, asksSurname, hasSeparateGarmentFields } from '@/lib/couple-type'
 
 function buildSystemPrompt(params: {
   partner1: string
   partner2: string
+  coupleType: CoupleType
   weddingDate: string | null
   ceremonyVenue: string | null
   ceremonyTime: string | null
   receptionVenue: string | null
   existingData: Record<string, unknown> | null
 }): string {
-  const { partner1, partner2, weddingDate, ceremonyVenue, ceremonyTime, receptionVenue, existingData } = params
+  const { partner1, partner2, coupleType, weddingDate, ceremonyVenue, ceremonyTime, receptionVenue, existingData } = params
 
   const sameVenue = !receptionVenue || receptionVenue === ceremonyVenue
 
@@ -20,13 +22,13 @@ function buildSystemPrompt(params: {
 
   const hasExisting = existingData && Object.keys(existingData).length > 0
 
-  const openingBride = sameVenue && ceremonyVenue
-    ? `Open with: "Are you getting ready at ${ceremonyVenue}?" — if yes, bride's prep address = ceremony venue; if no, ask for the full address including postcode.`
+  const opening1 = sameVenue && ceremonyVenue
+    ? `Open with: "Are you getting ready at ${ceremonyVenue}?" — if yes, ${partner1}'s prep address = ceremony venue; if no, ask for the full address including postcode.`
     : `Open with: "Where will ${partner1} be getting ready? (full address including postcode)"`
 
-  const groomNote = sameVenue
-    ? `After the bride: "Will ${partner2} be getting ready there as well?" — if no, ask what time ${partner2} will be arriving.`
-    : `After the bride: ask what time ${partner2} will be arriving at the venue. If he's getting ready elsewhere, get the address.`
+  const opening2 = sameVenue
+    ? `Then: "Will ${partner2} be getting ready there as well?" — if no, ask for ${partner2}'s address and what time they'll be arriving.`
+    : `Then: ask what time ${partner2} will be arriving at the venue. If ${partner2} is getting ready elsewhere, get the address.`
 
   const existingNote = hasExisting
     ? `\nPREVIOUSLY SAVED ANSWERS — reference these, don't re-ask unless they want to update:\n${JSON.stringify(existingData, null, 2)}\n`
@@ -34,7 +36,33 @@ function buildSystemPrompt(params: {
 
   const modeNote = hasExisting
     ? `The couple has already answered most questions. Start by acknowledging this warmly and asking if there's something specific to update, or if they'd like to go through everything.`
-    : `Fresh questionnaire — start directly with the bride's getting-ready question.`
+    : `Fresh questionnaire — start directly with ${partner1}'s getting-ready question.`
+
+  // The three VSCO templates differ in which questions exist at all, so the
+  // supplier list and extra questions have to track the couple's own form.
+  // See docs/vsco-field-maps.md.
+  const outfitAsk = hasSeparateGarmentFields(coupleType)
+    ? `${partner1}'s dress (designer & boutique), ${partner2}'s suit`
+    : `what you're both wearing — dresses and/or suits, designer & shop (ONE question covering both of them, not one each)`
+  const hairMakeupAsk = asksHairAndMakeup(coupleType) ? ', makeup artist, hair stylist' : ''
+  const surnameAsk = asksSurname(coupleType)
+    ? `\n- Are either of you changing your surname? If so, what to?`
+    : ''
+
+  // Only emit keys this couple's VSCO form actually has a field for.
+  const jsonKeys = [
+    'bride_prep_address', 'groom_prep_address', 'first_look', 'ceremony_location',
+    'ceremony_time', 'departure_time', 'departure_time_2', 'reception_location',
+    'wedding_breakfast_time', 'hot_meal_arranged', 'speeches_timing', 'emergency_contact',
+    'names_for_slideshow', 'aisle_escort',
+    ...(asksSurname(coupleType) ? ['surname_change'] : []),
+    'first_dance_song', 'choreographed_dance', 'unique_elements', 'honeymoon_plans',
+    'social_media', 'hashtag', 'venue_contact', 'wedding_planner',
+    'wedding_dress', ...(hasSeparateGarmentFields(coupleType) ? ['groom_suit'] : []),
+    ...(asksHairAndMakeup(coupleType) ? ['makeup_artist', 'hair_stylist'] : []),
+    'florist', 'venue_styling', 'cake', 'videographer', 'stationery', 'transport',
+    'dj_band', 'photo_booth', 'jeweller', 'additional_vendors',
+  ]
 
   return `You are helping ${partner1} and ${partner2} complete their wedding photography questionnaire for Jeff Oliver Photography.${dateStr ? ` Their wedding is on ${dateStr}.` : ''}
 
@@ -53,17 +81,19 @@ ${modeNote}
 
 TOPICS (work through naturally, don't list or number them):
 
-1. BRIDE GETTING READY
-${openingBride}
+1. ${partner1.split(/\s+/)[0].toUpperCase()} GETTING READY
+${opening1}
 
-2. GROOM GETTING READY
-${groomNote}
+2. ${partner2.split(/\s+/)[0].toUpperCase()} GETTING READY
+${opening2}
 
 3. FIRST LOOK
 Ask if they're planning a private first look before the ceremony.
 
-4. DEPARTURE TIME
-Only if getting-ready location differs from ceremony venue: ask what time they're leaving for the ceremony.
+4. DEPARTURE TIMES
+Ask each partner separately what time they're leaving for the ceremony — these are
+two different answers and both matter. Skip whichever partner is already getting
+ready at the ceremony venue.
 
 5. CEREMONY & RECEPTION
 - Confirm ceremony location${ceremonyVenue ? ` (pre-filled as ${ceremonyVenue} — just confirm or correct)` : ' (ask)'}
@@ -80,7 +110,7 @@ Name and mobile number for their main on-the-day contact.
 
 8. THE FUN STUFF
 - Names for their slideshow
-- Who's walking ${partner1} down the aisle?
+- What are their plans for walking down the aisle?${surnameAsk}
 - First dance song
 - Choreographed or keeping it natural?
 - Any surprises or special moments we should know about?
@@ -88,19 +118,25 @@ Name and mobile number for their main on-the-day contact.
 - Social media handles / wedding hashtag?
 
 9. SUPPLIERS
-Work through these naturally: venue coordinator contact details, wedding planner (if any), dress designer, ${partner2}'s suit, makeup artist, hair stylist, florist, venue styling/decoration, cake, videographer (if any), stationery, transport, DJ or band, photo booth (if any), jeweller, anything else.
+Work through these naturally: venue coordinator contact details, wedding planner (if any), ${outfitAsk}${hairMakeupAsk}, florist, venue styling/decoration, cake, videographer (if any), stationery, transport, DJ or band, photo booth (if any), jeweller, anything else.
 
 FINISHING UP:
 When you have everything, close warmly (e.g. "Perfect — I think we've got everything we need. Your questionnaire is all saved.") and on a new line output:
 
 QUESTIONNAIRE_COMPLETE:
-{"bride_prep_address":"","groom_prep_address":"","first_look":"","ceremony_location":"","ceremony_time":"","departure_time":"","reception_location":"","wedding_breakfast_time":"","hot_meal_arranged":"","speeches_timing":"","emergency_contact":"","names_for_slideshow":"","aisle_escort":"","first_dance_song":"","choreographed_dance":"","unique_elements":"","honeymoon_plans":"","social_media":"","hashtag":"","venue_contact":"","wedding_planner":"","wedding_dress":"","groom_suit":"","makeup_artist":"","hair_stylist":"","florist":"","venue_styling":"","cake":"","videographer":"","stationery":"","transport":"","dj_band":"","photo_booth":"","jeweller":"","additional_vendors":""}
+{${jsonKeys.map(k => `"${k}":""`).join(',')}}
 
 Rules for the JSON:
 - Fill every field from the conversation; use "" for anything not mentioned
 - Times in HH:MM 24-hour format
 - first_look and hot_meal_arranged: "yes" or "no"
 - speeches_timing: "before", "during", or "after"
+- KEY NAMING IS HISTORIC, NOT GENDERED. "bride_prep_address" always means
+  ${partner1}'s address and "groom_prep_address" always means ${partner2}'s,
+  whatever their genders. Same for departure_time (${partner1}) and
+  departure_time_2 (${partner2}).${hasSeparateGarmentFields(coupleType)
+    ? ''
+    : `\n- Put the single combined outfit answer in "wedding_dress" and leave "groom_suit" as "".`}
 - Emit this block exactly once, at the very end of your final message`
 }
 
@@ -116,7 +152,7 @@ export async function POST(request: NextRequest) {
 
   const { data: client } = await admin
     .from('clients')
-    .select('id, partner1_name, partner2_name, wedding_date, ceremony_venue, ceremony_time, reception_venue')
+    .select('id, partner1_name, partner2_name, partner1_role, partner2_role, wedding_date, ceremony_venue, ceremony_time, reception_venue')
     .eq('portal_slug', slug)
     .single()
 
@@ -136,6 +172,7 @@ export async function POST(request: NextRequest) {
   const systemPrompt = buildSystemPrompt({
     partner1: client.partner1_name,
     partner2: client.partner2_name,
+    coupleType: getCoupleType(client),
     weddingDate: client.wedding_date ?? null,
     ceremonyVenue: client.ceremony_venue ?? null,
     ceremonyTime: client.ceremony_time ?? null,

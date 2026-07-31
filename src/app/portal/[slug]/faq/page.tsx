@@ -4,6 +4,7 @@ import { FaqAccordion } from '@/components/portal/FaqAccordion'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { ChevronLeft } from 'lucide-react'
+import { getCoupleType } from '@/lib/couple-type'
 
 export default async function FaqPage({
   params,
@@ -13,12 +14,21 @@ export default async function FaqPage({
   const { slug } = await params
   const admin = createAdminClient()
 
-  const [{ data: client }, { data: blocks }] = await Promise.all([
-    admin.from('clients').select('id, wedding_date').eq('portal_slug', slug).single(),
-    admin.from('faq_blocks').select('title, subtitle, content').order('sort_order'),
-  ])
+  const { data: client } = await admin
+    .from('clients')
+    .select('id, wedding_date, partner1_role, partner2_role')
+    .eq('portal_slug', slug)
+    .single()
 
   if (!client) notFound()
+
+  // Two brides don't see "The Groom", two grooms don't see "The Bride".
+  // Jeff controls this per block in /admin/faq.
+  const { data: blocks } = await admin
+    .from('faq_blocks')
+    .select('title, subtitle, content')
+    .contains('audiences', [getCoupleType(client)])
+    .order('sort_order')
 
   const deliveryDate = client.wedding_date
     ? new Date(new Date(client.wedding_date).getTime() + 8 * 7 * 24 * 60 * 60 * 1000)

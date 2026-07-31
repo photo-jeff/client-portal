@@ -2,12 +2,14 @@
 import { useState } from 'react'
 import { QuestionnaireWizard } from './QuestionnaireWizard'
 import { QuestionnaireForm } from './QuestionnaireForm'
+import type { CoupleType } from '@/lib/couple-type'
 
 interface Props {
   clientId: string
   slug: string
   partner1: string
   partner2: string
+  coupleType: CoupleType
   weddingDate: string | null
   ceremonyVenue: string | null
   ceremonyTime: string | null
@@ -36,6 +38,7 @@ export function QuestionnaireSwitcher(props: Props) {
           slug={props.slug}
           partner1={props.partner1}
           partner2={props.partner2}
+          coupleType={props.coupleType}
           ceremonyVenue={props.ceremonyVenue}
           ceremonyTime={props.ceremonyTime}
           receptionVenue={props.receptionVenue}

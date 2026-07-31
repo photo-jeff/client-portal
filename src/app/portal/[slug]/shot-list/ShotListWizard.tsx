@@ -12,13 +12,11 @@ interface Props {
   slug: string
   partner1: string
   partner2: string
-  partner1Role: string
-  partner2Role: string
   weddingDate: string | null
   existingList: string | null
 }
 
-export function ShotListWizard({ slug, partner1, partner2, partner1Role, partner2Role, weddingDate, existingList }: Props) {
+export function ShotListWizard({ slug, partner1, partner2, weddingDate, existingList }: Props) {
   const [messages, setMessages] = useState<Message[]>([])
   const [input, setInput] = useState('')
   const [loading, setLoading] = useState(false)
@@ -36,11 +34,14 @@ export function ShotListWizard({ slug, partner1, partner2, partner1Role, partner
   async function startConversation() {
     setStarted(true)
     setLoading(true)
-    // Pass names and date upfront so Claude never asks for them
+    // Pass names and date upfront so Claude never asks for them. Deliberately no
+    // roles: the couple's own record defaults to Bride/Groom, so stating roles
+    // here risked telling a same-sex couple who they are and getting it wrong.
+    // The prompt works from first names and asks when a detail actually matters.
     const dateStr = weddingDate
       ? new Date(weddingDate).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })
       : null
-    const openingMsg = `Hi! We're ${partner1} and ${partner2} and we'd like to build our group shot list please.${dateStr ? ` Our wedding date is ${dateStr}.` : ''} ${partner1} is the ${partner1Role} and ${partner2} is the ${partner2Role}.`
+    const openingMsg = `Hi! We're ${partner1} and ${partner2} and we'd like to build our group shot list please.${dateStr ? ` Our wedding date is ${dateStr}.` : ''}`
     try {
       const res = await fetch('/api/portal/chat', {
         method: 'POST',

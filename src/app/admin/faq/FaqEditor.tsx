@@ -7,12 +7,35 @@ interface FaqBlock {
   title: string
   subtitle: string | null
   content: string
+  audiences: string[] | null
 }
+
+const AUDIENCES = [
+  { key: 'bg', label: 'Bride & Groom' },
+  { key: 'bb', label: 'Two Brides' },
+  { key: 'gg', label: 'Two Grooms' },
+] as const
 
 function BlockEditor({ block }: { block: FaqBlock }) {
   const [value, setValue] = useState(block.content)
   const [subtitle, setSubtitle] = useState(block.subtitle ?? '')
+  const [audiences, setAudiences] = useState<string[]>(block.audiences ?? ['bg', 'bb', 'gg'])
   const [status, setStatus] = useState<'idle' | 'saving' | 'saved'>('idle')
+
+  async function toggleAudience(key: string) {
+    const next = audiences.includes(key)
+      ? audiences.filter(a => a !== key)
+      : [...AUDIENCES.map(a => a.key)].filter(a => audiences.includes(a) || a === key)
+    setAudiences(next)
+    setStatus('saving')
+    await fetch(`/api/admin/faq/${block.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ audiences: next }),
+    })
+    setStatus('saved')
+    setTimeout(() => setStatus('idle'), 2000)
+  }
 
   async function save() {
     if (value === block.content) return
@@ -68,6 +91,26 @@ function BlockEditor({ block }: { block: FaqBlock }) {
       <p className="text-xs text-[#bbb] mt-1.5">
         To add a link: <code className="bg-[#f0ede8] px-1 py-0.5 rounded text-[#888]">[link text](https://example.com)</code>
       </p>
+
+      <div className="mt-4 pt-4 border-t border-[#f0ede8]">
+        <p className="text-xs tracking-[0.1em] uppercase text-[#919295] mb-2">Show this block to</p>
+        <div className="flex flex-wrap gap-4">
+          {AUDIENCES.map(a => (
+            <label key={a.key} className="flex items-center gap-2 text-sm text-[#535353] cursor-pointer">
+              <input
+                type="checkbox"
+                checked={audiences.includes(a.key)}
+                onChange={() => toggleAudience(a.key)}
+                className="accent-[#C9A96E]"
+              />
+              {a.label}
+            </label>
+          ))}
+        </div>
+        {audiences.length === 0 && (
+          <p className="text-xs text-red-500 mt-2">Nobody sees this block while all three are unticked.</p>
+        )}
+      </div>
     </div>
   )
 }

@@ -607,6 +607,76 @@ function readBody(req) {
 }
 
 // ------------------------------------------------------------
+// COUPLE RESOLUTION
+// The VSCO booking email has four partner slots — bride, groom, bride_2 and
+// groom_2 — and fills the pair that applies. Which pair is populated is what
+// identifies the couple type, so the portal no longer has to assume BG and
+// wait for Jeff to correct it by hand.
+//
+// Roles use VSCO's own vocabulary ('Bride' / 'Groom') because that's what the
+// clients table stores and what /admin's dropdown offers.
+// ------------------------------------------------------------
+function resolveCouple(body) {
+  const g = (...keys) => {
+    for (const k of keys) {
+      const v = (body[k] || '').toString().trim();
+      if (v) return v;
+    }
+    return '';
+  };
+
+  const brideFirst  = g('first_name', 'bride_first_name', 'bride.first_name', 'firstName');
+  const brideLast   = g('last_name', 'bride_last_name', 'bride.last_name', 'lastName');
+  const brideEmail  = g('email', 'bride_email', 'bride.email');
+  const bridePhone  = g('mobile', 'bride_mobile', 'bride.cell_phone');
+
+  const groomFirst  = g('groom_first_name', 'groom.first_name');
+  const groomLast   = g('groom_last_name', 'groom.last_name');
+  const groomEmail  = g('groom_email', 'groom.email');
+  const groomPhone  = g('groom_mobile', 'groom.cell_phone');
+
+  const bride2First = g('bride2_first_name', 'bride_2_first_name', 'bride_2.first_name');
+  const bride2Last  = g('bride2_last_name', 'bride_2_last_name', 'bride_2.last_name');
+  const bride2Email = g('bride2_email', 'bride_2_email', 'bride_2.email');
+
+  const groom2First = g('groom2_first_name', 'groom_2_first_name', 'groom_2.first_name');
+  const groom2Last  = g('groom2_last_name', 'groom_2_last_name', 'groom_2.last_name');
+  const groom2Email = g('groom2_email', 'groom_2_email', 'groom_2.email');
+
+  // Two brides
+  if (bride2First) {
+    return {
+      partner1First: brideFirst, partner1Last: brideLast, partner1Role: 'Bride',
+      partner2First: bride2First, partner2Last: bride2Last, partner2Role: 'Bride',
+      primaryEmail: brideEmail || bride2Email,
+      primaryPhone: bridePhone,
+      coupleType: 'bb',
+    };
+  }
+
+  // Two grooms — note there is no bride at all here, which is exactly the case
+  // that used to be rejected upstream for having no bride first name or email.
+  if (groom2First) {
+    return {
+      partner1First: groomFirst, partner1Last: groomLast, partner1Role: 'Groom',
+      partner2First: groom2First, partner2Last: groom2Last, partner2Role: 'Groom',
+      primaryEmail: groomEmail || groom2Email,
+      primaryPhone: groomPhone,
+      coupleType: 'gg',
+    };
+  }
+
+  // Bride & groom — the historic default, and still ~95% of bookings.
+  return {
+    partner1First: brideFirst, partner1Last: brideLast, partner1Role: 'Bride',
+    partner2First: groomFirst, partner2Last: groomLast, partner2Role: 'Groom',
+    primaryEmail: brideEmail || groomEmail,
+    primaryPhone: bridePhone || groomPhone,
+    coupleType: 'bg',
+  };
+}
+
+// ------------------------------------------------------------
 // HTTP SERVER
 // ------------------------------------------------------------
 const server = http.createServer(async (req, res) => {
@@ -632,11 +702,18 @@ const server = http.createServer(async (req, res) => {
         return;
       }
 
+      // The booking email carries four possible partner slots. VSCO fills the
+      // pair that applies, which is what tells us the couple type:
+      //   bride + groom   -> BG      bride + bride_2 -> BB      groom + groom_2 -> GG
+      // A two-groom booking has NO bride fields, so anything keyed off the
+      // bride alone must fall back to the groom or the booking is lost.
+      const couple = resolveCouple(body);
+
       const payload = {
-        firstName: body.first_name  || body.firstName  || '',
-        lastName:  body.last_name   || body.lastName   || '',
-        email:     body.email       || '',
-        phone:     body.mobile      || body.phone      || body.cell_phone || '',
+        firstName: couple.partner1First || body.firstName || '',
+        lastName:  couple.partner1Last  || body.lastName  || '',
+        email:     couple.primaryEmail  || '',
+        phone:     couple.primaryPhone  || body.phone || body.cell_phone || '',
         address:   body.address     || '',
         jobId:     body.job_id      || body.jobId      || '',
       };
@@ -659,8 +736,6 @@ const server = http.createServer(async (req, res) => {
 
       // Create client portal (fire-and-forget — doesn't block response)
       if (PORTAL_SECRET) {
-        const groomFirst   = body.groom_first_name || body['groom.first_name'] || '';
-        const groomLast    = body.groom_last_name  || body['groom.last_name']  || '';
         const rawDate      = body.wedding_date     || body['wedding_day.start_date'] || '';
         const rawTime      = body.ceremony_time    || body['ceremony.start_time']    || '';
         const weddingVenue = body.wedding_venue    || body['job.custom.wedding_venue'] || '';
@@ -678,8 +753,10 @@ const server = http.createServer(async (req, res) => {
           method:  'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            partner1_name:   `${payload.firstName} ${payload.lastName}`.trim(),
-            partner2_name:   `${groomFirst} ${groomLast}`.trim() || null,
+            partner1_name:   `${couple.partner1First} ${couple.partner1Last}`.trim() || `${payload.firstName} ${payload.lastName}`.trim(),
+            partner2_name:   `${couple.partner2First} ${couple.partner2Last}`.trim() || null,
+            partner1_role:   couple.partner1Role,
+            partner2_role:   couple.partner2Role,
             email:           payload.email,
             wedding_date:    normaliseDate(rawDate),
             ceremony_venue:  ceremonyVenue || null,
@@ -808,6 +885,11 @@ const server = http.createServer(async (req, res) => {
         const since = new Date(); since.setDate(since.getDate() - 120);
         const sinceStr = since.toISOString().split('T')[0];
         const { default: fetch } = await import('node-fetch');
+        // Silent-skip visibility — every reason an invoice does not reach the
+        // sync step gets recorded so the dashboard can show what happened
+        // instead of the misleading "Already in sync" catch-all.
+        const skipped = { too_small: 0, too_old: 0, no_vsco_id: [], vsco_id_no_match: [] };
+        let candidatesSeen = 0;
         let zohoInvoices = []; let page = 1;
         while (true) {
           const token = await getAccessToken();
@@ -815,12 +897,18 @@ const server = http.createServer(async (req, res) => {
           const d = await r.json(); const invoices = d.invoices || [];
           if (!invoices.length) break;
           for (const inv of invoices) {
-            if ((inv.total||0) <= 600) continue;
+            candidatesSeen++;
+            if ((inv.total||0) <= 600) { skipped.too_small++; continue; }
             const payDate = inv.last_payment_date || inv.date || '';
-            if (payDate && payDate < sinceStr) continue;
-            // Pull VSCO Job ID from invoice custom field (may be ULID or numeric)
-            // Falls back to contact-level lookup later if not set on the invoice
-            const vscoJobId = (inv.custom_fields || []).find(f => f.label === 'VSCO Job ID')?.value || '';
+            if (payDate && payDate < sinceStr) { skipped.too_old++; continue; }
+            // The VSCO ID may live in either of two Zoho custom fields that
+            // coexist: the legacy "VSCO Job ID" (cf_vsco_job_id) or the modern
+            // "VSCO ULID" (cf_vsco_ulid). A contact may carry one, the other, or
+            // both — contacts created since the webhook fix have only "VSCO ULID",
+            // so we must accept either label or their payments are silently skipped.
+            // Falls back to contact-level lookup later if neither is set here.
+            const vscoJobId = (inv.custom_fields || [])
+              .find(f => f.label === 'VSCO Job ID' || f.label === 'VSCO ULID')?.value || '';
             zohoInvoices.push({ customer_name: inv.customer_name, amount: inv.total, date: payDate, invoice_number: inv.invoice_number, vscoJobId, customer_id: inv.customer_id });
           }
           const oldest = invoices[invoices.length-1]; const od = oldest?.last_payment_date||oldest?.date||'';
@@ -841,7 +929,10 @@ const server = http.createServer(async (req, res) => {
                 const token = await getAccessToken();
                 const cr = await fetch(`${ZOHO_BASE}/contacts/${inv.customer_id}?organization_id=${ZOHO_ORG}`, { headers: { Authorization: `Zoho-oauthtoken ${token}` } });
                 const cd = await cr.json();
-                const contactField = (cd.contact?.custom_fields || []).find(f => f.label === 'VSCO Job ID');
+                // Same dual-label rule as the invoice lookup above: accept either
+                // the legacy "VSCO Job ID" or the modern "VSCO ULID" custom field.
+                const contactField = (cd.contact?.custom_fields || [])
+                  .find(f => f.label === 'VSCO Job ID' || f.label === 'VSCO ULID');
                 contactJobIdCache.set(inv.customer_id, contactField?.value || '');
               } catch(e) {
                 contactJobIdCache.set(inv.customer_id, '');
@@ -850,12 +941,36 @@ const server = http.createServer(async (req, res) => {
             vscoJobId = contactJobIdCache.get(inv.customer_id) || '';
           }
 
-          if (!vscoJobId) continue;
+          if (!vscoJobId) {
+            skipped.no_vsco_id.push({ customer: inv.customer_name, invoice: inv.invoice_number, amount: inv.amount });
+            console.log(`sync-payments SKIP no VSCO ID: ${inv.customer_name} inv ${inv.invoice_number} £${inv.amount}`);
+            continue;
+          }
           const job = byUlid.get(vscoJobId) || byNumeric.get(vscoJobId);
-          if (job) matches.push({ inv: { ...inv, vscoJobId }, job });
+          if (!job) {
+            skipped.vsco_id_no_match.push({ customer: inv.customer_name, invoice: inv.invoice_number, amount: inv.amount, vsco_id: vscoJobId });
+            console.log(`sync-payments SKIP VSCO ID no active-job match (probably settled or non-JOP): ${inv.customer_name} inv ${inv.invoice_number} £${inv.amount} vsco=${vscoJobId}`);
+            continue;
+          }
+          matches.push({ inv: { ...inv, vscoJobId }, job });
         }
 
-        if (!matches.length) { res.writeHead(200,{'Content-Type':'application/json'}); res.end(JSON.stringify({synced:0,failed:0,message:'Already in sync',ms:Date.now()-t0})); return; }
+        if (!matches.length) {
+          // Even when nothing to sync, surface WHY — the skipped breakdown tells
+          // the user whether anything actionable was silently dropped.
+          const actionable = skipped.no_vsco_id.length + skipped.vsco_id_no_match.length;
+          res.writeHead(200,{'Content-Type':'application/json'});
+          res.end(JSON.stringify({
+            synced: 0, failed: 0, skipped: 0,
+            candidates_seen: candidatesSeen,
+            skipped_breakdown: skipped,
+            message: actionable > 0
+              ? `Nothing to sync — but ${actionable} paid invoice(s) could not be matched. Check skipped_breakdown.`
+              : 'Already in sync',
+            ms: Date.now()-t0
+          }));
+          return;
+        }
 
         const VSCO_KEY = process.env.VSCO_API_KEY||'5a2ef52b-5a26-d3da-defa-dee9ce12-95e2da252851';
         const vscoHdr  = {'X-API-KEY':VSCO_KEY,'Content-Type':'application/json'};
@@ -920,20 +1035,57 @@ const server = http.createServer(async (req, res) => {
             continue;
           }
           try {
-            const ordRes   = await fetch(`https://tave.io/v2/job/${job.id}/order`,{headers:vscoHdr});
-            const ordData  = await ordRes.json(); if (!(ordData.items||[]).length) throw new Error('No order');
-            const orderId  = ordData.items[0].id;
-            const pmtRes   = await fetch('https://workspace.vsco.co/api/v2/payment',{method:'POST',headers:vscoHdr,body:JSON.stringify({jobId:job.id,amount:amtPence,status:'posted',paymentMethodId:'014gkqrfa0z0v4e1hym1nhgwsy',received:inv.date,memo:`Zoho INV-${inv.invoice_number} (auto-sync)`})});
-            const pmtData  = await pmtRes.json();
-            await fetch(`https://tave.io/v2/payment/${pmtData.id}/apply`,{method:'POST',headers:vscoHdr,body:JSON.stringify({orderId,amount:amtPence})});
-            results.push({job:job.displayName,amount:inv.amount,status:'synced'});
-            console.log('sync-payments synced: '+job.displayName);
-          } catch(err) { results.push({job:job.displayName,amount:inv.amount,status:'failed',error:err.message}); }
+            // Fetch orders for this VSCO job. A single job can have multiple
+            // orders (e.g. a settled deposit order + a still-open balance order),
+            // so we can't blindly take items[0] — that's how Tahlula's £2,200
+            // payment ended up orphaned against her stale £600 deposit order in
+            // Jul 2026. Prefer the order whose remaining balance matches this
+            // Zoho invoice's amount; fall back to any order still owed money;
+            // fall back to items[0] only when no other signal is available.
+            const ordRes = await fetch(`https://tave.io/v2/job/${job.id}/order`, { headers: vscoHdr });
+            if (!ordRes.ok) throw new Error(`fetch orders HTTP ${ordRes.status}`);
+            const ordData = await ordRes.json();
+            const orders = ordData.items || [];
+            if (!orders.length) throw new Error('No order');
+            const chosen = orders.find(o => (o.balance || 0) === amtPence)
+                        || orders.find(o => (o.balance || 0) > 0)
+                        || orders[0];
+            const orderId = chosen.id;
+
+            const pmtRes = await fetch('https://workspace.vsco.co/api/v2/payment', {
+              method: 'POST', headers: vscoHdr,
+              body: JSON.stringify({
+                jobId: job.id, amount: amtPence, status: 'posted',
+                paymentMethodId: '014gkqrfa0z0v4e1hym1nhgwsy',
+                received: inv.date,
+                memo: `Zoho INV-${inv.invoice_number} (auto-sync)`
+              })
+            });
+            if (!pmtRes.ok) throw new Error(`create payment HTTP ${pmtRes.status}: ${(await pmtRes.text()).slice(0, 200)}`);
+            const pmtData = await pmtRes.json();
+            if (!pmtData.id) throw new Error('create payment returned no id');
+
+            const applyRes = await fetch(`https://tave.io/v2/payment/${pmtData.id}/apply`, {
+              method: 'POST', headers: vscoHdr,
+              body: JSON.stringify({ orderId, amount: amtPence })
+            });
+            if (!applyRes.ok) throw new Error(`apply payment HTTP ${applyRes.status}: ${(await applyRes.text()).slice(0, 200)}`);
+
+            results.push({ job: job.displayName, amount: inv.amount, status: 'synced', order_title: chosen.title || chosen.name || null });
+            console.log('sync-payments synced: '+job.displayName+(chosen.title ? ' → order '+chosen.title : ''));
+          } catch(err) {
+            results.push({ job: job.displayName, amount: inv.amount, status: 'failed', error: err.message });
+            console.error('sync-payments FAILED: '+job.displayName+' — '+err.message);
+          }
         }
         const synced=results.filter(r=>r.status==='synced').length, failed=results.filter(r=>r.status==='failed').length;
-        const skipped=results.filter(r=>r.status==='skipped').length, wouldSync=results.filter(r=>r.status==='dry_run').length;
+        const skippedCount=results.filter(r=>r.status==='skipped').length, wouldSync=results.filter(r=>r.status==='dry_run').length;
         res.writeHead(200,{'Content-Type':'application/json'});
-        res.end(JSON.stringify(Object.assign({synced,failed,skipped}, dryRun?{dry_run:true,would_sync:wouldSync}:{}, {results,ms:Date.now()-t0})));
+        res.end(JSON.stringify(Object.assign(
+          { synced, failed, skipped: skippedCount },
+          dryRun ? { dry_run: true, would_sync: wouldSync } : {},
+          { candidates_seen: candidatesSeen, skipped_breakdown: skipped, results, ms: Date.now()-t0 }
+        )));
       } catch(err) { console.error('sync-payments error:',err.message); res.writeHead(500,{'Content-Type':'application/json'}); res.end(JSON.stringify({error:err.message})); }
     })(); return;
   }

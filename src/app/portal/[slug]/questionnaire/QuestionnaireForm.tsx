@@ -4,12 +4,19 @@ import { Button } from '@/components/ui/Button'
 import { Input, Textarea } from '@/components/ui/Input'
 import { calculatePhotographerTimings, formatDisplayTime } from '@/lib/time-utils'
 import { CheckCircle, Clock } from 'lucide-react'
+import {
+  type CoupleType,
+  asksHairAndMakeup,
+  asksSurname,
+  hasSeparateGarmentFields,
+} from '@/lib/couple-type'
 
 interface Props {
   clientId: string
   slug: string
   partner1: string
   partner2: string
+  coupleType: CoupleType
   ceremonyVenue: string | null
   ceremonyTime: string | null
   receptionVenue: string | null
@@ -185,10 +192,15 @@ function TimeSelect({
 // ── Main form ────────────────────────────────────────────────────────────────
 
 export function QuestionnaireForm({
-  clientId, slug, partner1, partner2,
+  clientId, slug, partner1, partner2, coupleType,
   ceremonyVenue, ceremonyTime, receptionVenue,
   daysUntil, initialData, isCompleted,
 }: Props) {
+  // These track the three VSCO templates exactly — see docs/vsco-field-maps.md.
+  // Asking something the couple's own form has no field for just loses the answer.
+  const showHairMakeup = asksHairAndMakeup(coupleType)
+  const showSurname    = asksSurname(coupleType)
+  const separateOutfits = hasSeparateGarmentFields(coupleType)
   const [step, setStep] = useState(0)
   const [saving, setSaving] = useState(false)
   const [savedAt, setSavedAt] = useState<number | null>(null)
@@ -202,6 +214,8 @@ export function QuestionnaireForm({
     first_look: 'no',
     ceremony_location: ceremonyVenue ?? '',
     departure_time: '',
+    departure_time_2: '',
+    surname_change: '',
     ceremony_time: ceremonyTime ?? '',
     reception_location: receptionVenue ?? ceremonyVenue ?? '',
     wedding_breakfast_time: '',
@@ -382,11 +396,19 @@ export function QuestionnaireForm({
                     onChange={v => update('ceremony_time', v)}
                     hint={ceremonyTime ? 'Pre-filled from your booking' : undefined}
                   />
+                </div>
+                <div className="grid grid-cols-2 gap-4 items-start">
                   <TimeSelect
-                    label="What time are you leaving for the ceremony?"
+                    label={`What time is ${firstName(partner1)} leaving for the ceremony?`}
                     value={data.departure_time as string}
                     onChange={v => update('departure_time', v)}
-                    hint="Leave blank if your ceremony is at the same location"
+                    hint="Leave blank if getting ready at the ceremony venue"
+                  />
+                  <TimeSelect
+                    label={`What time is ${firstName(partner2)} leaving?`}
+                    value={data.departure_time_2 as string}
+                    onChange={v => update('departure_time_2', v)}
+                    hint="Leave blank if getting ready at the ceremony venue"
                   />
                 </div>
               </div>
@@ -403,7 +425,9 @@ export function QuestionnaireForm({
                     <p className="font-serif text-lg">{formatDisplayTime(timings.photographerArrival)}</p>
                   </div>
                   <div>
-                    <p className="text-xs text-[#b5b8ba] uppercase tracking-widest">{firstName(partner1)} in dress by</p>
+                    <p className="text-xs text-[#b5b8ba] uppercase tracking-widest">
+                      {coupleType === 'bg' ? `${firstName(partner1)} in dress by` : `${firstName(partner1)} ready by`}
+                    </p>
                     <p className="font-serif text-lg">{formatDisplayTime(timings.brideReadyBy)}</p>
                   </div>
                 </div>
@@ -497,12 +521,25 @@ export function QuestionnaireForm({
                   maxLength={VSCO_TEXT_MAX}
                 />
                 <Input
-                  label={`Who is walking ${firstName(partner1)} down the aisle?`}
+                  label={
+                    coupleType === 'bg'
+                      ? `Who is walking ${firstName(partner1)} down the aisle?`
+                      : 'What are your plans for walking down the aisle?'
+                  }
                   value={data.aisle_escort as string}
                   onChange={e => update('aisle_escort', e.target.value)}
                   placeholder="Name (or 'Walking alone / together')"
                   maxLength={VSCO_TEXT_MAX}
                 />
+                {showSurname && (
+                  <Input
+                    label="Will you be changing your surname? If yes, what will it be?"
+                    value={data.surname_change as string}
+                    onChange={e => update('surname_change', e.target.value)}
+                    placeholder="No change / new surname"
+                    maxLength={VSCO_TEXT_MAX}
+                  />
+                )}
                 <Input
                   label="What's your first dance song?"
                   value={data.first_dance_song as string}
@@ -577,10 +614,21 @@ export function QuestionnaireForm({
             <div className="grid sm:grid-cols-2 gap-5">
               <Input label="Venue coordinator" value={data.venue_contact as string} onChange={e => update('venue_contact', e.target.value)} placeholder="Name + email or phone" maxLength={VSCO_TEXT_MAX} />
               <Input label="Wedding planner" value={data.wedding_planner as string} onChange={e => update('wedding_planner', e.target.value)} placeholder="Name + @instagram" maxLength={VSCO_TEXT_MAX} />
-              <Input label={`${firstName(partner1)}'s dress`} value={data.wedding_dress as string} onChange={e => update('wedding_dress', e.target.value)} placeholder="Designer & boutique" maxLength={VSCO_TEXT_MAX} />
-              <Input label={`${firstName(partner2)}'s suit`} value={data.groom_suit as string} onChange={e => update('groom_suit', e.target.value)} placeholder="Designer & shop" maxLength={VSCO_TEXT_MAX} />
-              <Input label="Make-up artist(s)" value={data.makeup_artist as string} onChange={e => update('makeup_artist', e.target.value)} placeholder="Name + @instagram" maxLength={VSCO_TEXT_MAX} />
-              <Input label="Hair stylist" value={data.hair_stylist as string} onChange={e => update('hair_stylist', e.target.value)} placeholder="Name + @instagram" maxLength={VSCO_TEXT_MAX} />
+              {separateOutfits ? (
+                <>
+                  <Input label={`${firstName(partner1)}'s dress`} value={data.wedding_dress as string} onChange={e => update('wedding_dress', e.target.value)} placeholder="Designer & boutique" maxLength={VSCO_TEXT_MAX} />
+                  <Input label={`${firstName(partner2)}'s suit`} value={data.groom_suit as string} onChange={e => update('groom_suit', e.target.value)} placeholder="Designer & shop" maxLength={VSCO_TEXT_MAX} />
+                </>
+              ) : (
+                // BB and GG have a single combined outfit field on their VSCO form
+                <Input label="Dresses / suits" value={data.wedding_dress as string} onChange={e => update('wedding_dress', e.target.value)} placeholder="Designer & shop for both of you" maxLength={VSCO_TEXT_MAX} />
+              )}
+              {showHairMakeup && (
+                <>
+                  <Input label="Make-up artist(s)" value={data.makeup_artist as string} onChange={e => update('makeup_artist', e.target.value)} placeholder="Name + @instagram" maxLength={VSCO_TEXT_MAX} />
+                  <Input label="Hair stylist" value={data.hair_stylist as string} onChange={e => update('hair_stylist', e.target.value)} placeholder="Name + @instagram" maxLength={VSCO_TEXT_MAX} />
+                </>
+              )}
               <Input label="Florist" value={data.florist as string} onChange={e => update('florist', e.target.value)} placeholder="Name + @instagram" maxLength={VSCO_TEXT_MAX} />
               <Input label="Venue styling" value={data.venue_styling as string} onChange={e => update('venue_styling', e.target.value)} placeholder="Name + @instagram" maxLength={VSCO_TEXT_MAX} />
               <Input label="Cake" value={data.cake as string} onChange={e => update('cake', e.target.value)} placeholder="Name + @instagram" maxLength={VSCO_TEXT_MAX} />

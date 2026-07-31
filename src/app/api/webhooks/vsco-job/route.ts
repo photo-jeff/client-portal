@@ -18,6 +18,8 @@ export async function POST(request: NextRequest) {
   const body = await request.json() as {
     partner1_name?: string
     partner2_name?: string
+    partner1_role?: string
+    partner2_role?: string
     email?: string
     wedding_date?: string | null    // YYYY-MM-DD
     ceremony_time?: string | null   // HH:MM
@@ -31,6 +33,18 @@ export async function POST(request: NextRequest) {
   const partner1 = body.partner1_name?.trim() ?? ''
   const partner2 = body.partner2_name?.trim() ?? ''
   const email = body.email?.trim() ?? ''
+
+  // The Mac webhook derives these from which partner slots the VSCO booking
+  // email filled (bride/groom/bride_2/groom_2). Fall back to the historic
+  // Bride & Groom default for anything that predates that, or arrives from a
+  // source that doesn't send roles.
+  const VALID_ROLES = ['Bride', 'Groom', 'Partner']
+  const role = (v: string | undefined, fallback: string) => {
+    const r = v?.trim() ?? ''
+    return VALID_ROLES.includes(r) ? r : fallback
+  }
+  const partner1Role = role(body.partner1_role, 'Bride')
+  const partner2Role = role(body.partner2_role, 'Groom')
 
   if (!partner1 || !email) {
     return NextResponse.json({ error: 'Missing required fields (partner1_name or email)' }, { status: 400 })
@@ -80,6 +94,8 @@ export async function POST(request: NextRequest) {
     email,
     partner1_name: partner1,
     partner2_name: partner2 || '',
+    partner1_role: partner1Role,
+    partner2_role: partner2Role,
     wedding_date: weddingDate,
     ceremony_venue: ceremonyVenue,
     reception_venue: receptionVenue,

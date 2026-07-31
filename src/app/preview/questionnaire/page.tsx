@@ -51,6 +51,7 @@ export default function PreviewQuestionnaire() {
         slug="preview"
         partner1="Paige"
         partner2="Jake"
+        coupleType="bg"
         ceremonyVenue="The Orangery, Maidstone"
         ceremonyTime="13:30"
         receptionVenue={null}

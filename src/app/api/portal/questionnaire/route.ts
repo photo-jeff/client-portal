@@ -1,6 +1,7 @@
 import { createAdminClient } from '@/lib/supabase/admin'
 import { NextRequest, NextResponse } from 'next/server'
 import { submitVscoQuestionnaire } from '@/lib/vsco-questionnaire'
+import { getCoupleType } from '@/lib/couple-type'
 
 function label(key: string): string {
   return key.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())
@@ -87,7 +88,7 @@ export async function POST(request: NextRequest) {
 
   const { data: client } = await admin
     .from('clients')
-    .select('id, partner1_name, partner2_name, vsco_questionnaire_url')
+    .select('id, partner1_name, partner2_name, partner1_role, partner2_role, vsco_questionnaire_url')
     .eq('portal_slug', slug)
     .single()
 
@@ -137,7 +138,7 @@ export async function POST(request: NextRequest) {
     await Promise.allSettled([
       emailTask,
       vscoUrl
-        ? submitVscoQuestionnaire(vscoUrl, data as Record<string, string>)
+        ? submitVscoQuestionnaire(vscoUrl, data as Record<string, string>, getCoupleType(client))
             .catch(err => console.error('VSCO submission failed:', err instanceof Error ? err.message : String(err)))
         : Promise.resolve(),
     ])
