@@ -620,8 +620,17 @@ export function QuestionnaireForm({
                   <Input label={`${firstName(partner2)}'s suit`} value={data.groom_suit as string} onChange={e => update('groom_suit', e.target.value)} placeholder="Designer & shop" maxLength={VSCO_TEXT_MAX} />
                 </>
               ) : (
-                // BB and GG have a single combined outfit field on their VSCO form
-                <Input label="Dresses / suits" value={data.wedding_dress as string} onChange={e => update('wedding_dress', e.target.value)} placeholder="Designer & shop for both of you" maxLength={VSCO_TEXT_MAX} />
+                // BB and GG have a single combined outfit field on their VSCO form.
+                // Two brides could be in dresses, suits or one of each, so keep it
+                // open; two grooms are near enough always suits — which is also how
+                // their own VSCO form labels it.
+                <Input
+                  label={coupleType === 'gg' ? 'Suits' : 'Dresses / suits'}
+                  value={data.wedding_dress as string}
+                  onChange={e => update('wedding_dress', e.target.value)}
+                  placeholder="Designer & shop for both of you"
+                  maxLength={VSCO_TEXT_MAX}
+                />
               )}
               {showHairMakeup && (
                 <>

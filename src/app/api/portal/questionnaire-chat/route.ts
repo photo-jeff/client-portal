@@ -43,7 +43,11 @@ function buildSystemPrompt(params: {
   // See docs/vsco-field-maps.md.
   const outfitAsk = hasSeparateGarmentFields(coupleType)
     ? `${partner1}'s dress (designer & boutique), ${partner2}'s suit`
-    : `what you're both wearing — dresses and/or suits, designer & shop (ONE question covering both of them, not one each)`
+    : coupleType === 'gg'
+      // Two grooms are near enough always in suits, but don't rule out anything
+      // else if they say otherwise — just don't lead with it.
+      ? `both your suits, designer & shop (ONE question covering both of them, not one each)`
+      : `what you're both wearing — dresses, suits or one of each, designer & shop (ONE question covering both of them, not one each)`
   const hairMakeupAsk = asksHairAndMakeup(coupleType) ? ', makeup artist, hair stylist' : ''
   const surnameAsk = asksSurname(coupleType)
     ? `\n- Are either of you changing your surname? If so, what to?`
