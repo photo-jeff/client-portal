@@ -24,6 +24,26 @@ A branded portal replacing VSCO's questionnaire. Clients access via a secret slu
 
 ---
 
+## Couple type (BG / BB / GG)
+
+`getCoupleType()` in `src/lib/couple-type.ts` derives `bg` | `bb` | `gg` from
+`partner1_role` / `partner2_role`, falling back to `bg`. It drives which VSCO
+form the answers go to, which questions the portal asks, and which FAQ blocks
+show.
+
+**There are three separate VSCO questionnaire templates** — VSCO can't branch one
+form. They differ in substance, not just field IDs: BB/GG have one combined
+outfit field, GG has no hair/make-up fields, only BB/GG ask about surname
+changes. **`docs/vsco-field-maps.md` is the authority** — IDs aren't guessable
+(VSCO allocates globally, and partner order doesn't follow ID order).
+
+Roles are set automatically at booking: the VSCO email carries bride/groom/
+bride_2/groom_2, and whichever pair is populated identifies the type. Jeff can
+override in `/admin` before sending the portal link.
+
+FAQ visibility is per block via `faq_blocks.audiences` (text[]), editable in
+`/admin/faq`.
+
 ## Questionnaire → VSCO write-back
 
 `/api/portal/questionnaire-chat` — Claude Opus 4.7, dynamic system prompt built from client record. When complete, Claude emits `QUESTIONNAIRE_COMPLETE:` + JSON. The wizard saves to Supabase, emails Jeff, then calls `submitVscoQuestionnaire()` in `src/lib/vsco-questionnaire.ts` which GETs the VSCO form page for the CSRF token and POSTs ~30 fields mapped to VSCO's `QF6135xxx` field IDs.
