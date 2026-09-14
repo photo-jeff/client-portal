@@ -125,6 +125,7 @@ export function ArchiveList({ clients }: { clients: Client[] }) {
                 <td className="px-4 py-4 text-right" onClick={e => e.stopPropagation()}>
                   <Link
                     href={`/admin/clients/${c.id as string}`}
+                    prefetch={false}
                     className="text-xs tracking-[0.08em] uppercase underline hover:no-underline text-[#888]"
                   >
                     View

@@ -22,40 +22,48 @@ export default async function ClientDetailPage(props: { params: Promise<{ id: st
   if (!user || user.email !== 'mrjeffoliver@gmail.com') redirect('/login')
 
   const admin = createAdminClient()
-  const { data: client } = await admin.from('clients').select('*').eq('id', id).single()
-  if (!client) notFound()
 
   // Prev/next in same order as admin list (wedding_date asc, past > 1 week excluded)
   const archiveThreshold = new Date(Date.now() - 7 * 86_400_000).toISOString().split('T')[0]
-  const { data: allClients } = await admin
-    .from('clients')
-    .select('id')
-    .or(`wedding_date.is.null,wedding_date.gte.${archiveThreshold}`)
-    .order('wedding_date', { ascending: true, nullsFirst: false })
+
+  // Independent reads — run together rather than one round trip after another
+  const [
+    { data: client },
+    { data: allClients },
+    { data: questionnaire },
+    { data: shotList },
+    { data: shotListChat },
+  ] = await Promise.all([
+    admin.from('clients').select('*').eq('id', id).single(),
+    admin
+      .from('clients')
+      .select('id')
+      .or(`wedding_date.is.null,wedding_date.gte.${archiveThreshold}`)
+      .order('wedding_date', { ascending: true, nullsFirst: false }),
+    admin
+      .from('questionnaire_responses')
+      .select('data, completed_at, updated_at')
+      .eq('client_id', id)
+      .single(),
+    admin
+      .from('shot_list_items')
+      .select('*')
+      .eq('client_id', id)
+      .order('sort_order'),
+    admin
+      .from('shot_list_chats')
+      .select('messages, completed_at')
+      .eq('client_id', id)
+      .order('completed_at', { ascending: false })
+      .limit(1)
+      .maybeSingle(),
+  ])
+  if (!client) notFound()
+
   const ids = (allClients ?? []).map((c: { id: string }) => c.id)
   const idx = ids.indexOf(id)
   const prevId = idx > 0 ? ids[idx - 1] : null
   const nextId = idx < ids.length - 1 ? ids[idx + 1] : null
-
-  const { data: questionnaire } = await admin
-    .from('questionnaire_responses')
-    .select('data, completed_at, updated_at')
-    .eq('client_id', id)
-    .single()
-
-  const { data: shotList } = await admin
-    .from('shot_list_items')
-    .select('*')
-    .eq('client_id', id)
-    .order('sort_order')
-
-  const { data: shotListChat } = await admin
-    .from('shot_list_chats')
-    .select('messages, completed_at')
-    .eq('client_id', id)
-    .order('completed_at', { ascending: false })
-    .limit(1)
-    .maybeSingle()
 
   const shotListText = (client as Record<string, unknown>).shot_list_text as string | null
   const shotListManuallyComplete = (client as Record<string, unknown>).shot_list_completed as boolean ?? false
