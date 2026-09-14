@@ -117,7 +117,7 @@ export function AdminClientList({ clients }: { clients: Client[] }) {
                     <PortalSentCell client={c} />
                   </td>
                   <td className="px-6 py-4 text-right">
-                    <Link href={`/admin/clients/${c.id as string}`} className="text-xs tracking-[0.08em] uppercase underline hover:no-underline">
+                    <Link href={`/admin/clients/${c.id as string}`} prefetch={false} className="text-xs tracking-[0.08em] uppercase underline hover:no-underline">
                       Manage
                     </Link>
                   </td>
