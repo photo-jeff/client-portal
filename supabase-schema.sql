@@ -10,6 +10,7 @@ create table clients (
   wedding_date date,
   ceremony_venue text,
   ceremony_time text,
+  arrival_time text, -- HH:MM override; null = 2½ hrs before ceremony
   reception_venue text,
   package_name text,
   portal_slug text not null unique,

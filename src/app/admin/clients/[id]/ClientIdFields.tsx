@@ -55,13 +55,14 @@ function SelectField({
 }
 
 function Field({
-  label, field, initial, clientId, type = 'text',
+  label, field, initial, clientId, type = 'text', hint,
 }: {
   label: string
   field: string
   initial: string | null
   clientId: string
   type?: FieldType
+  hint?: string
 }) {
   const [value, setValue] = useState(initial ?? '')
   const [saved, setSaved] = useState(false)
@@ -108,6 +109,7 @@ function Field({
         {saved && <span className="text-xs text-green-600 shrink-0">Saved ✓</span>}
         {error && <span className="text-xs text-red-500 shrink-0" title={error}>Failed — {error}</span>}
       </dd>
+      {hint && <p className="text-xs text-[#aaa] mt-0.5">{hint}</p>}
     </div>
   )
 }
@@ -123,6 +125,7 @@ export function ClientIdFields({ clientId, initialValues }: Props) {
       <Field label="Email"                 field="email"                  initial={v('email')}                  clientId={clientId} type="email" />
       <Field label="Wedding date"          field="wedding_date"           initial={v('wedding_date')}           clientId={clientId} type="date" />
       <Field label="Ceremony time"         field="ceremony_time"          initial={v('ceremony_time')}          clientId={clientId} type="time" />
+      <Field label="Arrival on site"       field="arrival_time"           initial={v('arrival_time')}           clientId={clientId} type="time" hint="Blank = 2½ hrs before ceremony" />
       <Field label="Ceremony venue"        field="ceremony_venue"         initial={v('ceremony_venue')}         clientId={clientId} />
       <Field label="Reception venue"       field="reception_venue"        initial={v('reception_venue')}        clientId={clientId} />
       <Field label="Package"               field="package_name"           initial={v('package_name')}           clientId={clientId} />

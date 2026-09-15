@@ -135,6 +135,7 @@ export default async function ClientDetailPage(props: { params: Promise<{ id: st
                 email: client.email ?? null,
                 wedding_date: client.wedding_date ?? null,
                 ceremony_time: client.ceremony_time ?? null,
+                arrival_time: (client as Record<string, unknown>).arrival_time as string | null,
                 ceremony_venue: client.ceremony_venue ?? null,
                 reception_venue: client.reception_venue ?? null,
                 package_name: client.package_name ?? null,

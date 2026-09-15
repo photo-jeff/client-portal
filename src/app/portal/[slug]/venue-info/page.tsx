@@ -30,15 +30,18 @@ export default async function VenueInfoPage({
 
   const { data: client } = await admin
     .from('clients')
-    .select('ceremony_time, ceremony_venue')
+    .select('ceremony_time, ceremony_venue, arrival_time')
     .eq('portal_slug', slug)
     .single()
 
   if (!client) notFound()
 
-  const arrivalTime = client.ceremony_time
-    ? formatTime(addMinutes(client.ceremony_time, -150))
-    : null
+  // arrival_time is a per-wedding override set in /admin; otherwise 2½ hours before the ceremony
+  const arrivalTime = client.arrival_time
+    ? formatTime(client.arrival_time)
+    : client.ceremony_time
+      ? formatTime(addMinutes(client.ceremony_time, -150))
+      : null
 
   return (
     <div className="max-w-2xl mx-auto">
@@ -84,7 +87,7 @@ export default async function VenueInfoPage({
               <dt className="text-xs tracking-[0.1em] uppercase text-[#919295] w-40 shrink-0 pt-0.5">Arrival on site</dt>
               <dd>
                 {arrivalTime
-                  ? <>{arrivalTime} <span className="text-[#b5b8ba]">(2½ hours before ceremony)</span></>
+                  ? <>{arrivalTime}{!client.arrival_time && <> <span className="text-[#b5b8ba]">(2½ hours before ceremony)</span></>}</>
                   : <span className="text-[#b5b8ba]">2½ hours before ceremony start</span>}
               </dd>
             </div>
