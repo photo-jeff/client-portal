@@ -689,6 +689,40 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
+  // ─── SHOOTPROOF OAUTH CALLBACK (one-time authorization) ──────────────────
+  // Captures the authorization code from ShootProof and drops it where
+  // shootproof/authorize.mjs can pick it up. No untrusted query params are
+  // reflected into the HTML response. Values are logged server-side only.
+  if (req.method === 'GET' && url.pathname === '/shootproof/callback') {
+    const code  = url.searchParams.get('code');
+    const state = url.searchParams.get('state');
+    const oauthError = url.searchParams.get('error');
+    if (code) {
+      try {
+        writeFileSync(
+          join(__dir, 'shootproof', '.oauth-code.json'),
+          JSON.stringify({ code, state, at: Date.now() }),
+          'utf8'
+        );
+        console.log('[shootproof] authorization code captured');
+      } catch (e) {
+        console.error('[shootproof] could not write oauth code file:', e.message);
+      }
+    } else {
+      console.error('[shootproof] callback without code; error=', oauthError);
+    }
+    res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
+    res.end(
+      '<!doctype html><meta charset="utf-8"><title>ShootProof authorization</title>' +
+      '<body style="font-family:system-ui;max-width:40rem;margin:4rem auto;padding:0 1rem">' +
+      (code
+        ? '<h1>Authorization received ✓</h1><p>You can close this tab and return to your terminal — the authorize script will continue automatically.</p>'
+        : '<h1>Authorization failed</h1><p>No authorization code was returned. Check the terminal and try again.</p>') +
+      '</body>'
+    );
+    return;
+  }
+
   // ─── VSCO BOOKING → ZOHO + PORTAL ────────────────────────────────────────
   if (req.method === 'POST' && url.pathname === '/webhook/vsco-booking') {
     try {
@@ -1121,6 +1155,88 @@ const server = http.createServer(async (req, res) => {
         res.end(JSON.stringify({ error: err.message }));
       }
     })(); return;
+  }
+
+  // ─── GALLERY QUEUE (read) ─────────────────────────────────────────────────
+  // Read-only worklist for the gallery-setup dashboard: VSCO↔ShootProof matches +
+  // role-based groom surname (via ./shootproof/ops/queue-lib.mjs) merged with the
+  // gallery_pipeline state table. Localhost only (same guard as /portal-state).
+  // Isolated: dynamic import + own try/catch, so it can never affect other routes.
+  if (req.method === 'GET' && url.pathname === '/gallery-queue') {
+    const t0 = Date.now();
+    (async () => {
+      try {
+        const host = (req.headers.host || '').split(':')[0];
+        if (req.headers['cf-connecting-ip'] || (host !== 'localhost' && host !== '127.0.0.1')) {
+          res.writeHead(404); res.end(JSON.stringify({ error: 'Not found' })); return;
+        }
+        const { buildQueue } = await import('./shootproof/ops/queue-lib.mjs');
+        const q = await buildQueue({ enrich: true });
+        let stateMap = {};
+        if (SUPABASE_KEY) {
+          const r = await fetch(`${SUPABASE_URL}/rest/v1/gallery_pipeline?select=*`, {
+            headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` },
+          });
+          if (r.ok) for (const row of await r.json()) stateMap[row.vsco_job_id] = row;
+        }
+        const worklist = q.worklist
+          .map(w => {
+            const s = stateMap[w.vscoJobId] || {};
+            return { ...w, state: {
+              // A gallery that's already a proper wedding gallery counts as set up,
+              // even if it was built outside the board (no stage_setup row).
+              setup: !!s.stage_setup || w.status === 'delivered' || w.status === 'wedding-ready',
+              freeDigitals: !!s.stage_free_digitals, complete: !!s.stage_complete,
+              video: !!s.stage_video,
+              password: s.gallery_password || w.proposedPassword || null,
+              eventId: s.event_id || (w.gallery && w.gallery.id) || null,
+            } };
+          })
+          .filter(w => !w.state.complete); // Complete drops off the board
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ worklist, generatedAt: q.generatedAt, ms: Date.now() - t0 }));
+      } catch (err) {
+        console.error('gallery-queue error:', err.message);
+        res.writeHead(502, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: err.message }));
+      }
+    })(); return;
+  }
+
+  // ─── GALLERY STATE (write) ────────────────────────────────────────────────
+  // Upsert one wedding's pipeline tick(s) into gallery_pipeline. Localhost only.
+  if (req.method === 'POST' && url.pathname === '/gallery-state') {
+    const t0 = Date.now();
+    let data = '';
+    req.on('data', chunk => { data += chunk; });
+    req.on('end', async () => {
+      try {
+        const host = (req.headers.host || '').split(':')[0];
+        if (req.headers['cf-connecting-ip'] || (host !== 'localhost' && host !== '127.0.0.1')) {
+          res.writeHead(404); res.end(JSON.stringify({ error: 'Not found' })); return;
+        }
+        if (!SUPABASE_KEY) throw new Error('SUPABASE_SERVICE_ROLE_KEY not set');
+        const b = JSON.parse(data || '{}');
+        if (!b.vsco_job_id) throw new Error('vsco_job_id required');
+        const row = { vsco_job_id: b.vsco_job_id, updated_at: new Date().toISOString() };
+        for (const k of ['couple', 'wedding_date', 'event_id', 'gallery_password', 'stage_setup', 'stage_free_digitals', 'stage_complete', 'stage_video', 'notes']) {
+          if (b[k] !== undefined) row[k] = b[k];
+        }
+        const r = await fetch(`${SUPABASE_URL}/rest/v1/gallery_pipeline?on_conflict=vsco_job_id`, {
+          method: 'POST',
+          headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}`, 'Content-Type': 'application/json', 'Prefer': 'resolution=merge-duplicates,return=representation' },
+          body: JSON.stringify(row),
+        });
+        if (!r.ok) throw new Error(`Supabase ${r.status}: ${(await r.text()).slice(0, 200)}`);
+        const saved = await r.json();
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ saved: Array.isArray(saved) ? saved[0] : saved, ms: Date.now() - t0 }));
+      } catch (err) {
+        console.error('gallery-state error:', err.message);
+        res.writeHead(502, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: err.message }));
+      }
+    }); return;
   }
 
   // 404
