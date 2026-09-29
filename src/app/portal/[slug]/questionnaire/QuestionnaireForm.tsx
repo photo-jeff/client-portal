@@ -256,9 +256,9 @@ export function QuestionnaireForm({
   // Same-sex couples get one shared "ready by", counted back from the ceremony
   // itself: grooms 1.5 hours before, brides 1 hour before.
   const readyByBasis = (data.ceremony_time as string) || timingsBasis
-  const readyBy = coupleType === 'bb'
+  const readyBy = coupleType === 'gg'
     ? { label: 'Grooms ready by', time: subtractMinutes(readyByBasis, 90) }
-    : coupleType === 'gg'
+    : coupleType === 'bb'
       ? { label: 'Brides ready by', time: subtractMinutes(readyByBasis, 60) }
       : { label: `${firstName(partner1)} in dress by`, time: timings?.brideReadyBy ?? '' }
 
