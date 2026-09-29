@@ -2,7 +2,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { Button } from '@/components/ui/Button'
 import { Input, Textarea } from '@/components/ui/Input'
-import { calculatePhotographerTimings, formatDisplayTime } from '@/lib/time-utils'
+import { calculatePhotographerTimings, formatDisplayTime, subtractMinutes } from '@/lib/time-utils'
 import { CheckCircle, Clock } from 'lucide-react'
 import {
   type CoupleType,
@@ -253,6 +253,15 @@ export function QuestionnaireForm({
   const timingsBasis = (data.departure_time as string) || (data.ceremony_time as string) || ''
   const timings = timingsBasis ? calculatePhotographerTimings(timingsBasis) : null
 
+  // Same-sex couples get one shared "ready by", counted back from the ceremony
+  // itself: grooms 1.5 hours before, brides 1 hour before.
+  const readyByBasis = (data.ceremony_time as string) || timingsBasis
+  const readyBy = coupleType === 'bb'
+    ? { label: 'Grooms ready by', time: subtractMinutes(readyByBasis, 90) }
+    : coupleType === 'gg'
+      ? { label: 'Brides ready by', time: subtractMinutes(readyByBasis, 60) }
+      : { label: `${firstName(partner1)} in dress by`, time: timings?.brideReadyBy ?? '' }
+
   function update(key: string, value: string | boolean) {
     setData(prev => ({ ...prev, [key]: value }))
   }
@@ -426,9 +435,9 @@ export function QuestionnaireForm({
                   </div>
                   <div>
                     <p className="text-xs text-[#b5b8ba] uppercase tracking-widest">
-                      {coupleType === 'bg' ? `${firstName(partner1)} in dress by` : `${firstName(partner1)} ready by`}
+                      {readyBy.label}
                     </p>
-                    <p className="font-serif text-lg">{formatDisplayTime(timings.brideReadyBy)}</p>
+                    <p className="font-serif text-lg">{formatDisplayTime(readyBy.time)}</p>
                   </div>
                 </div>
               </div>
