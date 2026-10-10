@@ -109,9 +109,9 @@ export default function PreviewImportantInfo() {
           </p>
           <div className="space-y-3">
             {[
-              { label: 'Professional Indemnity Certificate', file: 'DC501 - PI certificate.pdf' },
-              { label: 'Public Liability Certificate', file: 'DC502 - PL certificate.pdf' },
-              { label: 'Employers Liability Certificate', file: 'DC503 - EL certificate.pdf' },
+              { label: 'Professional Indemnity Certificate', file: 'PI certificate 26-27.pdf' },
+              { label: 'Public Liability Certificate', file: 'PL certificate 26-27.pdf' },
+              { label: 'Employers Liability Certificate', file: 'EL certificate 26-27.pdf' },
               { label: 'Drone Certificate', file: 'Drone Certificate.pdf' },
               { label: 'Drone Schedule', file: 'Drone Schedule.pdf' },
             ].map(doc => (
