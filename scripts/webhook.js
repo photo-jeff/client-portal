@@ -679,6 +679,75 @@ function resolveCouple(body) {
 // ------------------------------------------------------------
 // HTTP SERVER
 // ------------------------------------------------------------
+// ─── GALLERY PIPELINE HELPERS ───────────────────────────────────────────────
+// Shared by /gallery-queue, /gallery-state and the /board page.
+// Localhost only: tunnel requests carry cf-connecting-ip and a public Host, both refused.
+function isLocalReq(req) {
+  const host = (req.headers.host || '').split(':')[0];
+  return !req.headers['cf-connecting-ip'] && (host === 'localhost' || host === '127.0.0.1');
+}
+function readRawBody(req) {
+  return new Promise((resolve, reject) => { let d = ''; req.on('data', c => { d += c; }); req.on('end', () => resolve(d)); req.on('error', reject); });
+}
+async function buildGalleryWorklist() {
+  const { buildQueue } = await import('./shootproof/ops/queue-lib.mjs');
+  const q = await buildQueue({ enrich: true });
+  let stateMap = {};
+  if (SUPABASE_KEY) {
+    const r = await fetch(`${SUPABASE_URL}/rest/v1/gallery_pipeline?select=*`, {
+      headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` },
+    });
+    if (r.ok) for (const row of await r.json()) stateMap[row.vsco_job_id] = row;
+  }
+  const worklist = q.worklist
+    .map(w => {
+      const s = stateMap[w.vscoJobId] || {};
+      return { ...w, state: {
+        // A gallery that's already a proper wedding gallery counts as set up,
+        // even if it was built outside the board (no stage_setup row).
+        setup: !!s.stage_setup || w.status === 'delivered' || w.status === 'wedding-ready',
+        freeDigitals: !!s.stage_free_digitals, complete: !!s.stage_complete,
+        video: !!s.stage_video,
+        password: s.gallery_password || w.proposedPassword || null,
+        eventId: s.event_id || (w.gallery && w.gallery.id) || null,
+      } };
+    })
+    .filter(w => !w.state.complete) // Complete drops off the board
+    .sort((a, b) => (a.weddingDate || '').localeCompare(b.weddingDate || '')); // oldest wedding first
+  return { worklist, generatedAt: q.generatedAt };
+}
+async function saveGalleryState(b) {
+  if (!SUPABASE_KEY) throw new Error('SUPABASE_SERVICE_ROLE_KEY not set');
+  if (!b.vsco_job_id) throw new Error('vsco_job_id required');
+  const row = { vsco_job_id: b.vsco_job_id, updated_at: new Date().toISOString() };
+  for (const k of ['couple', 'wedding_date', 'event_id', 'gallery_password', 'stage_setup', 'stage_free_digitals', 'stage_complete', 'stage_video', 'notes']) {
+    if (b[k] !== undefined) row[k] = b[k];
+  }
+  const r = await fetch(`${SUPABASE_URL}/rest/v1/gallery_pipeline?on_conflict=vsco_job_id`, {
+    method: 'POST',
+    headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}`, 'Content-Type': 'application/json', 'Prefer': 'resolution=merge-duplicates,return=representation' },
+    body: JSON.stringify(row),
+  });
+  if (!r.ok) throw new Error(`Supabase ${r.status}: ${(await r.text()).slice(0, 200)}`);
+  const saved = await r.json();
+  return Array.isArray(saved) ? saved[0] : saved;
+}
+// The ShootProof + VSCO scan takes ~25s, so the board reads a cache that is rebuilt in the
+// background every 15 min and straight after each board action. A stale cache is served while
+// a rebuild runs; only a cold start waits.
+const galleryBoardCache = { data: null, at: 0, refreshing: null };
+function galleryBoardQueue({ refresh = false } = {}) {
+  const fresh = galleryBoardCache.data && Date.now() - galleryBoardCache.at < 15 * 60 * 1000;
+  if (!refresh && fresh) return Promise.resolve(galleryBoardCache.data);
+  if (!galleryBoardCache.refreshing) {
+    galleryBoardCache.refreshing = buildGalleryWorklist()
+      .then(d => { galleryBoardCache.data = d; galleryBoardCache.at = Date.now(); return d; })
+      .finally(() => { galleryBoardCache.refreshing = null; });
+  }
+  return (!refresh && galleryBoardCache.data) ? Promise.resolve(galleryBoardCache.data) : galleryBoardCache.refreshing;
+}
+setInterval(() => { galleryBoardQueue({ refresh: true }).catch(e => console.error('board refresh:', e.message)); }, 15 * 60 * 1000).unref();
+
 const server = http.createServer(async (req, res) => {
   const url = new URL(req.url, `http://localhost:${PORT}`);
 
@@ -1166,37 +1235,61 @@ const server = http.createServer(async (req, res) => {
     const t0 = Date.now();
     (async () => {
       try {
-        const host = (req.headers.host || '').split(':')[0];
-        if (req.headers['cf-connecting-ip'] || (host !== 'localhost' && host !== '127.0.0.1')) {
-          res.writeHead(404); res.end(JSON.stringify({ error: 'Not found' })); return;
-        }
-        const { buildQueue } = await import('./shootproof/ops/queue-lib.mjs');
-        const q = await buildQueue({ enrich: true });
-        let stateMap = {};
-        if (SUPABASE_KEY) {
-          const r = await fetch(`${SUPABASE_URL}/rest/v1/gallery_pipeline?select=*`, {
-            headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` },
-          });
-          if (r.ok) for (const row of await r.json()) stateMap[row.vsco_job_id] = row;
-        }
-        const worklist = q.worklist
-          .map(w => {
-            const s = stateMap[w.vscoJobId] || {};
-            return { ...w, state: {
-              // A gallery that's already a proper wedding gallery counts as set up,
-              // even if it was built outside the board (no stage_setup row).
-              setup: !!s.stage_setup || w.status === 'delivered' || w.status === 'wedding-ready',
-              freeDigitals: !!s.stage_free_digitals, complete: !!s.stage_complete,
-              video: !!s.stage_video,
-              password: s.gallery_password || w.proposedPassword || null,
-              eventId: s.event_id || (w.gallery && w.gallery.id) || null,
-            } };
-          })
-          .filter(w => !w.state.complete); // Complete drops off the board
+        if (!isLocalReq(req)) { res.writeHead(404); res.end(JSON.stringify({ error: 'Not found' })); return; }
+        const q = await buildGalleryWorklist();
         res.writeHead(200, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ worklist, generatedAt: q.generatedAt, ms: Date.now() - t0 }));
+        res.end(JSON.stringify({ worklist: q.worklist, generatedAt: q.generatedAt, ms: Date.now() - t0 }));
       } catch (err) {
         console.error('gallery-queue error:', err.message);
+        res.writeHead(502, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ error: err.message }));
+      }
+    })(); return;
+  }
+
+  // ─── GALLERY BOARD (self-serve page) ─────────────────────────────────────
+  // The gallery-setup board as a page on this Mac (http://localhost:3456/board), so Jeff can
+  // work it without a Claude session. The queue is cached and refreshed in the background;
+  // actions run the same sp.mjs / wedding-video.mjs scripts (dry-run → commit) via
+  // shootproof/ops/board-lib.mjs. Localhost only — the tunnel must never reach these.
+  if (url.pathname === '/board' || url.pathname.startsWith('/board/')) {
+    (async () => {
+      try {
+        if (!isLocalReq(req)) { res.writeHead(404); res.end(JSON.stringify({ error: 'Not found' })); return; }
+        const board = await import('./shootproof/ops/board-lib.mjs');
+        const json = (code, obj) => { res.writeHead(code, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' }); res.end(JSON.stringify(obj)); };
+        if (req.method === 'GET' && (url.pathname === '/board' || url.pathname === '/board/')) {
+          res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8', 'Cache-Control': 'no-store' });
+          res.end(readFileSync(join(dirname(fileURLToPath(import.meta.url)), 'shootproof/ops/board.html')));
+          return;
+        }
+        if (req.method === 'GET' && url.pathname === '/board/api/queue') {
+          const q = await galleryBoardQueue({ refresh: url.searchParams.get('refresh') === '1' });
+          json(200, { worklist: q.worklist.map(board.decorate), generatedAt: q.generatedAt, refreshing: galleryBoardCache.refreshing });
+          return;
+        }
+        if (req.method === 'GET' && url.pathname.startsWith('/board/api/run/')) {
+          const r = board.getRun(url.pathname.split('/').pop());
+          r ? json(200, r) : json(404, { error: 'unknown run' });
+          return;
+        }
+        if (req.method === 'POST' && url.pathname === '/board/api/run') {
+          const b = JSON.parse(await readRawBody(req) || '{}');
+          const q = await galleryBoardQueue({});
+          const raw = q.worklist.find(w => w.vscoJobId === b.vscoJobId);
+          if (!raw) { json(404, { error: 'That couple is not on the board.' }); return; }
+          const row = board.decorate(raw);
+          const runId = board.startRun({
+            action: b.action, row, overrides: b.overrides || {},
+            saveState: (fields) => saveGalleryState({ vsco_job_id: row.vscoJobId, couple: row.couple, wedding_date: row.weddingDate, ...fields }),
+            onDone: () => { galleryBoardQueue({ refresh: true }).catch(e => console.error('board refresh:', e.message)); },
+          });
+          json(200, { runId });
+          return;
+        }
+        json(404, { error: 'Not found' });
+      } catch (err) {
+        console.error('board error:', err.message);
         res.writeHead(502, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ error: err.message }));
       }
@@ -1207,36 +1300,19 @@ const server = http.createServer(async (req, res) => {
   // Upsert one wedding's pipeline tick(s) into gallery_pipeline. Localhost only.
   if (req.method === 'POST' && url.pathname === '/gallery-state') {
     const t0 = Date.now();
-    let data = '';
-    req.on('data', chunk => { data += chunk; });
-    req.on('end', async () => {
+    (async () => {
       try {
-        const host = (req.headers.host || '').split(':')[0];
-        if (req.headers['cf-connecting-ip'] || (host !== 'localhost' && host !== '127.0.0.1')) {
-          res.writeHead(404); res.end(JSON.stringify({ error: 'Not found' })); return;
-        }
-        if (!SUPABASE_KEY) throw new Error('SUPABASE_SERVICE_ROLE_KEY not set');
-        const b = JSON.parse(data || '{}');
-        if (!b.vsco_job_id) throw new Error('vsco_job_id required');
-        const row = { vsco_job_id: b.vsco_job_id, updated_at: new Date().toISOString() };
-        for (const k of ['couple', 'wedding_date', 'event_id', 'gallery_password', 'stage_setup', 'stage_free_digitals', 'stage_complete', 'stage_video', 'notes']) {
-          if (b[k] !== undefined) row[k] = b[k];
-        }
-        const r = await fetch(`${SUPABASE_URL}/rest/v1/gallery_pipeline?on_conflict=vsco_job_id`, {
-          method: 'POST',
-          headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}`, 'Content-Type': 'application/json', 'Prefer': 'resolution=merge-duplicates,return=representation' },
-          body: JSON.stringify(row),
-        });
-        if (!r.ok) throw new Error(`Supabase ${r.status}: ${(await r.text()).slice(0, 200)}`);
-        const saved = await r.json();
+        if (!isLocalReq(req)) { res.writeHead(404); res.end(JSON.stringify({ error: 'Not found' })); return; }
+        const saved = await saveGalleryState(JSON.parse(await readRawBody(req) || '{}'));
+        galleryBoardCache.at = 0; // stale: next board read serves it and rebuilds in the background
         res.writeHead(200, { 'Content-Type': 'application/json' });
-        res.end(JSON.stringify({ saved: Array.isArray(saved) ? saved[0] : saved, ms: Date.now() - t0 }));
+        res.end(JSON.stringify({ saved, ms: Date.now() - t0 }));
       } catch (err) {
         console.error('gallery-state error:', err.message);
         res.writeHead(502, { 'Content-Type': 'application/json' });
         res.end(JSON.stringify({ error: err.message }));
       }
-    }); return;
+    })(); return;
   }
 
   // 404
