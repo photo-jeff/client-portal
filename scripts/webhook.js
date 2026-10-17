@@ -724,7 +724,27 @@ async function buildGalleryWorklist() {
       }
     }
     const { songInfo } = await import('./shootproof/ops/song-lib.mjs');
-    for (const w of q.worklist) if (songMap[w.vscoJobId]) w.firstDance = await songInfo(songMap[w.vscoJobId]);
+    const music = await import('./shootproof/ops/music-lib.mjs');
+    const { cleanCouple } = await import('./shootproof/ops/board-lib.mjs');
+    const fixes = music.overrides();   // songs Jeff gave directly (questionnaire blank / wrong)
+    for (const w of q.worklist) {
+      const raw = fixes[w.vscoJobId] || songMap[w.vscoJobId];
+      if (!raw) continue;
+      w.firstDance = await songInfo(raw);
+      // Jeff's own copy wins: its length is the truth for the photo count; Apple Music is the fallback.
+      if (w.firstDance.status === 'tbc') continue;
+      const local = await music.findLocalCached({ raw, artist: w.firstDance.artist, title: w.firstDance.title });
+      if (local) w.firstDance = { ...w.firstDance, local };
+      // Slideshow still to make (video not done, not an elopement) → couple folder + track in RAW Footage, once.
+      const st = stateMap[w.vscoJobId] || {};
+      if (!st.stage_video && !st.stage_complete && !/elopement/i.test(w.couple)) {
+        try {
+          const couple = cleanCouple(w.couple);   // as booked in VSCO (gallery names can carry typos)
+          await music.ensureCoupleFolder(couple);
+          if (local) w.firstDance.copied = await music.copyForSlideshow(w.vscoJobId, couple, local);
+        } catch (e) { console.error(`slideshow song ${w.couple}:`, e.message); }
+      }
+    }
   } catch (e) { console.error('first-dance songs:', e.message); }
   const worklist = q.worklist
     .map(w => {
