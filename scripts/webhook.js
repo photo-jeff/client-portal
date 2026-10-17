@@ -741,7 +741,7 @@ async function buildGalleryWorklist() {
         try {
           const couple = cleanCouple(w.couple);   // as booked in VSCO (gallery names can carry typos)
           await music.ensureCoupleFolder(couple);
-          if (local) w.firstDance.copied = await music.copyForSlideshow(w.vscoJobId, couple, local);
+          if (local && !local.protected) w.firstDance.copied = await music.copyForSlideshow(w.vscoJobId, couple, local);
         } catch (e) { console.error(`slideshow song ${w.couple}:`, e.message); }
       }
     }
