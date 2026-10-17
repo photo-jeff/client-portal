@@ -686,6 +686,17 @@ function isLocalReq(req) {
   const host = (req.headers.host || '').split(':')[0];
   return !req.headers['cf-connecting-ip'] && (host === 'localhost' || host === '127.0.0.1');
 }
+// The gallery board (and only the board) is also open to the home network, so Sarah can use it
+// from her machine (Jeff, 17 Oct 2026): private-range source addresses only, and never anything
+// that came through the Cloudflare tunnel (cloudflared connects from localhost but always adds
+// cf-connecting-ip).
+function isLanReq(req) {
+  if (req.headers['cf-connecting-ip'] || req.headers['cf-ray']) return false;
+  const ip = (req.socket.remoteAddress || '').replace(/^::ffff:/, '');
+  return ip === '127.0.0.1' || ip === '::1'
+    || /^10\./.test(ip) || /^192\.168\./.test(ip) || /^172\.(1[6-9]|2\d|3[01])\./.test(ip)
+    || /^169\.254\./.test(ip) || /^f[cd][0-9a-f]{2}:/i.test(ip) || /^fe80:/i.test(ip);
+}
 function readRawBody(req) {
   return new Promise((resolve, reject) => { let d = ''; req.on('data', c => { d += c; }); req.on('end', () => resolve(d)); req.on('error', reject); });
 }
@@ -1267,11 +1278,11 @@ const server = http.createServer(async (req, res) => {
   // The gallery-setup board as a page on this Mac (http://localhost:3456/board), so Jeff can
   // work it without a Claude session. The queue is cached and refreshed in the background;
   // actions run the same sp.mjs / wedding-video.mjs scripts (dry-run → commit) via
-  // shootproof/ops/board-lib.mjs. Localhost only — the tunnel must never reach these.
+  // shootproof/ops/board-lib.mjs. Home network only (isLanReq) — the tunnel must never reach these.
   if (url.pathname === '/board' || url.pathname.startsWith('/board/')) {
     (async () => {
       try {
-        if (!isLocalReq(req)) { res.writeHead(404); res.end(JSON.stringify({ error: 'Not found' })); return; }
+        if (!isLanReq(req)) { res.writeHead(404); res.end(JSON.stringify({ error: 'Not found' })); return; }
         const board = await import('./shootproof/ops/board-lib.mjs');
         const json = (code, obj) => { res.writeHead(code, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' }); res.end(JSON.stringify(obj)); };
         if (req.method === 'GET' && (url.pathname === '/board' || url.pathname === '/board/')) {
