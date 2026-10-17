@@ -699,6 +699,22 @@ async function buildGalleryWorklist() {
     });
     if (r.ok) for (const row of await r.json()) stateMap[row.vsco_job_id] = row;
   }
+  // First-dance song from the portal questionnaire → length + photo count for the slideshow.
+  // Best-effort: a failure here just leaves the song off the board.
+  const songMap = {};
+  try {
+    if (SUPABASE_KEY) {
+      const r = await fetch(`${SUPABASE_URL}/rest/v1/clients?select=vsco_job_id,questionnaire_responses(song:data->>first_dance_song)&vsco_job_id=not.is.null`, {
+        headers: { 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` },
+      });
+      if (r.ok) for (const c of await r.json()) {
+        const qr = Array.isArray(c.questionnaire_responses) ? c.questionnaire_responses[0] : c.questionnaire_responses;
+        if (qr && qr.song) songMap[c.vsco_job_id] = qr.song;
+      }
+    }
+    const { songInfo } = await import('./shootproof/ops/song-lib.mjs');
+    for (const w of q.worklist) if (songMap[w.vscoJobId]) w.firstDance = await songInfo(songMap[w.vscoJobId]);
+  } catch (e) { console.error('first-dance songs:', e.message); }
   const worklist = q.worklist
     .map(w => {
       const s = stateMap[w.vscoJobId] || {};
